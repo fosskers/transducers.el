@@ -33,7 +33,7 @@ reducer function F, a concrete data SOURCE, and any number
 of additional SOURCES, perform a full, strict transduction.")
 
 (cl-defmethod t/transduce (xform f (source list) &rest sources)
-  "Transduce over a list.
+  "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete list SOURCE, and any number of
@@ -41,11 +41,19 @@ additional lists SOURCES, perform a full, strict transduction."
   (transducers--list-transduce xform f source sources))
 
 (cl-defmethod t/transduce (xform f (source vector) &rest sources)
-  "Transduce over a vector.
+  "Transduce over vectors.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete vector SOURCE, and any number of
 additional vector SOURCES, perform a full, strict transduction."
+  (transducers--vector-transduce xform f source sources))
+
+(cl-defmethod t/transduce (xform f (source string) &rest sources)
+  "Transduce over strings.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete string SOURCE, and any number of
+additional string SOURCES, perform a full, strict transduction."
   (transducers--vector-transduce xform f source sources))
 
 (defun transducers--list-transduce (xform f coll &optional colls)
@@ -103,6 +111,8 @@ vector, and VECS are any additional source vectors."
                           (reduced-val acc)
                         (recurse acc (1+ i)))))))
       (recurse identity 0))))
+
+;; (apply #'min (length [1 2 3]) (mapcar #'length '([1 2] [1 2 3 4])))
 
 ;; --- Transducers --- ;;
 
