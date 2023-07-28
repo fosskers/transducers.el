@@ -7,7 +7,7 @@
 ;; Created: July 26, 2023
 ;; Modified: July 26, 2023
 ;; Version: 0.0.1
-;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
+;; Keywords: lisp
 ;; Homepage: https://github.com/colin/transducers
 ;; Package-Requires: ((emacs "24.3"))
 ;;
@@ -29,7 +29,7 @@
   "The entry-point for processing some data source via transductions.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a some concerte data SOURCE, and any number
+reducer function F, a concrete data SOURCE, and any number
 of additional SOURCES, perform a full, strict transduction.")
 
 (cl-defmethod t/transduce (xform f (source list) &rest sources)
@@ -39,31 +39,6 @@ Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete list SOURCE, and any number of
 additional lists SOURCES, perform a full, strict transduction."
   (transducers--list-transduce xform f source sources))
-
-(defun t/pass (reducer)
-  "Just pass along each value of the transduction.
-
-Same in intent with applying `t/map' to `identity', but this
-should be slightly more efficient. It is at least shorter to
-type.
-
-This function is expected to be passed \"bare\" to `t/transduce',
-so there is no need for the caller to manually pass a REDUCER."
-  (lambda (result &rest inputs)
-    (if inputs (apply reducer result inputs)
-      (funcall reducer result))))
-
-;; (t/transduce #'t/pass #'+ '(1 2 3))
-
-(defun t/map (f)
-  "Apply a function F to all elements of the transduction."
-  (lambda (reducer)
-    (lambda (result &rest inputs)
-      (if inputs (funcall reducer result (apply f inputs))
-        (funcall reducer result)))))
-
-;; (t/transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
-;; (t/transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
 
 (defun transducers--list-transduce (xform f coll &optional colls)
   "Transduce over a list.
@@ -93,6 +68,46 @@ list, and COLLS are any additional source lists."
                       (recurse v (cdr items) (mapcar #'cdr extras)))))))
     (recurse identity coll colls)))
 
+;; --- Transducers --- ;;
+
+(defun t/pass (reducer)
+  "Just pass along each value of the transduction.
+
+Same in intent with applying `t/map' to `identity', but this
+should be slightly more efficient. It is at least shorter to
+type.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (lambda (result &rest inputs)
+    (if inputs (apply reducer result inputs)
+      (funcall reducer result))))
+
+;; (t/transduce #'t/pass #'+ '(1 2 3))
+
+(defun t/map (f)
+  "Apply a function F to all elements of the transduction."
+  (lambda (reducer)
+    (lambda (result &rest inputs)
+      (if inputs (funcall reducer result (apply f inputs))
+        (funcall reducer result)))))
+
+;; (t/transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
+;; (t/transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
+
+;; --- Reducers --- ;;
+
+(defun t/cons (&rest vargs)
+  "Collect all results as a list.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc)        (reverse acc))
+    (`()            '())))
+
+;; (t/transduce (t/map #'1+) #'t/cons '(1 2 3))
+
 (provide 'transducers)
 ;;; transducers.el ends here
-
