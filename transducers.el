@@ -48,7 +48,7 @@ so there is no need for the caller to manually pass a REDUCER."
         (funcall reducer result)))))
 
 ;; (transducers--list-transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
-;; (transducers--list-transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6))
+;; (transducers--list-transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
 
 (defun transducers--list-transduce (xform f coll &rest colls)
   "Transduce over a list.
@@ -68,23 +68,15 @@ F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
 \"element\" or \"zero\" value), COLL is our guaranteed source
 list, and COLLS are any additional source lists."
-  (if (not colls)
-      (cl-labels ((recurse (acc items)
-                    (if (not items) acc
-                      (let ((v (funcall f acc (car items))))
-                        (if (reduced-p v)
-                            (reduced-val v)
-                          (recurse v (cdr items)))))))
-        (recurse identity coll))
-    (cl-labels ((recurse (acc items extras)
-                  (if (or (not items)
-                          (cl-some #'not extras))
-                      acc
-                    (let ((v (apply f acc (car items) (mapcar #'car extras))))
-                      (if (reduced-p v)
-                          (reduced-val v)
-                        (recurse v (cdr items) (mapcar #'cdr extras)))))))
-      (recurse identity coll colls))))
+  (cl-labels ((recurse (acc items extras)
+                (if (or (not items)
+                        (cl-some #'not extras))
+                    acc
+                  (let ((v (apply f acc (car items) (mapcar #'car extras))))
+                    (if (reduced-p v)
+                        (reduced-val v)
+                      (recurse v (cdr items) (mapcar #'cdr extras)))))))
+    (recurse identity coll colls)))
 
 (provide 'transducers)
 ;;; transducers.el ends here
