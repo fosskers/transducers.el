@@ -25,6 +25,21 @@
   "A wrapper that signals that reduction has completed."
   val)
 
+(cl-defgeneric t/transduce (xform f source &rest sources)
+  "The entry-point for processing some data source via transductions.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a some concerte data SOURCE, and any number
+of additional SOURCES, perform a full, strict transduction.")
+
+(cl-defmethod t/transduce (xform f (source list) &rest sources)
+  "Transduce over a list.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete list SOURCE, and any number of
+additional lists SOURCES, perform a full, strict transduction."
+  (transducers--list-transduce xform f source sources))
+
 (defun t/pass (reducer)
   "Just pass along each value of the transduction.
 
@@ -38,7 +53,7 @@ so there is no need for the caller to manually pass a REDUCER."
     (if inputs (apply reducer result inputs)
       (funcall reducer result))))
 
-;; (transducers--list-transduce #'t/pass #'+ '(1 2 3))
+;; (t/transduce #'t/pass #'+ '(1 2 3))
 
 (defun t/map (f)
   "Apply a function F to all elements of the transduction."
@@ -47,10 +62,10 @@ so there is no need for the caller to manually pass a REDUCER."
       (if inputs (funcall reducer result (apply f inputs))
         (funcall reducer result)))))
 
-;; (transducers--list-transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
-;; (transducers--list-transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
+;; (t/transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
+;; (t/transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
 
-(defun transducers--list-transduce (xform f coll &rest colls)
+(defun transducers--list-transduce (xform f coll &optional colls)
   "Transduce over a list.
 
 Given a composition of transducer functions (the XFORM), a
