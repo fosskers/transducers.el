@@ -33,12 +33,16 @@ It is at least shorter to type."
     (if inputs (apply reducer result inputs)
       (funcall reducer result))))
 
+;; (transducers--list-transduce #'t/pass #'+ '(1 2 3))
+
 (defun t/map (f)
   "Apply a function F to all elements of the transduction."
   (lambda (reducer)
     (lambda (result &rest inputs)
-      (if inputs (apply reducer result (apply f inputs))
+      (if inputs (funcall reducer result (apply f inputs))
         (funcall reducer result)))))
+
+;; (transducers--list-transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
 
 (defun transducers--list-transduce (xform f coll)
   (let* ((init   (funcall f))
@@ -54,9 +58,6 @@ It is at least shorter to type."
                         (reduced-val v)
                       (recurse v (cdr items)))))))
     (recurse identity lst)))
-
-(transducers--list-transduce #'t/pass #'+ '(1 2 3))
-(transducers--list-transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
 
 (provide 'transducers)
 ;;; transducers.el ends here
