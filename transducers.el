@@ -40,8 +40,16 @@ reducer function F, a concrete list SOURCE, and any number of
 additional lists SOURCES, perform a full, strict transduction."
   (transducers--list-transduce xform f source sources))
 
+(cl-defmethod t/transduce (xform f (source vector) &rest sources)
+  "Transduce over a vector.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete vector SOURCE, and any number of
+additional vector SOURCES, perform a full, strict transduction."
+  (transducers--vector-transduce xform f source sources))
+
 (defun transducers--list-transduce (xform f coll &optional colls)
-  "Transduce over a list.
+  "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete list COLL, and any number of
@@ -52,7 +60,7 @@ additional lists COLLS, perform a full, strict transduction."
     (funcall xf result)))
 
 (defun transducers--list-reduce (f identity coll &optional colls)
-  "Reduce over a list.
+  "Reduce over lists.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
@@ -67,6 +75,34 @@ list, and COLLS are any additional source lists."
                         (reduced-val v)
                       (recurse v (cdr items) (mapcar #'cdr extras)))))))
     (recurse identity coll colls)))
+
+(defun transducers--vector-transduce (xform f coll &optional colls)
+  "Transduce over vectors.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete list COLL, and any number of
+additional lists COLLS, perform a full, strict transduction."
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (transducers--vector-reduce xf init coll colls)))
+    (funcall xf result)))
+
+(defun transducers--vector-reduce (f identity vec &optional vecs)
+  "Reduce over vectors.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), VEC is our guaranteed source
+vector, and VECS are any additional source vectors."
+  (let ((len (length vec)))
+    (cl-labels ((recurse (acc i)
+                  (if (= i len)
+                      acc
+                    (let ((acc (funcall f acc (aref vec i))))
+                      (if (reduced-p acc)
+                          (reduced-val acc)
+                        (recurse acc (1+ i)))))))
+      (recurse identity 0))))
 
 ;; --- Transducers --- ;;
 
@@ -104,10 +140,53 @@ Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
   (pcase vargs
     (`(,acc ,input) (cons input acc))
-    (`(,acc)        (reverse acc))
-    (`()            '())))
+    (`(,acc) (reverse acc))
+    (`() '())))
 
 ;; (t/transduce (t/map #'1+) #'t/cons '(1 2 3))
+
+(defun t/string (&rest vargs)
+  "Collect all results as a string.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc) (cl-concatenate 'string (reverse acc)))
+    (`() '())))
+
+(defun t/vector (&rest vargs)
+  "Collect all results as a vector.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc) (cl-concatenate 'vector (reverse acc)))
+    (`() '())))
+
+(defun t/count (&rest vargs)
+  "Count the number of elements that made it through the transduction.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,_) (1+ acc))
+    (`(,acc) acc)
+    (`() 0)))
+
+(defun t/average (fallback)
+  "Calculate the average value of all numeric elements in a transduction.
+
+A FALLBACK must be provided in case no elements made it through
+the transduction (thus protecting from division-by-zero)."
+  (let ((items 0))
+    (lambda (&rest vargs)
+      (pcase vargs
+        (`(,acc ,input) (+ acc input))
+        (`(,acc) (if (= 0 items) fallback
+                   (/ acc items)))
+        (`() 0)))))
 
 (provide 'transducers)
 ;;; transducers.el ends here
