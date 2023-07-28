@@ -1,0 +1,9 @@
+image: archlinux
+packages:
+- emacs-nox
+sources:
+- https://git.sr.ht/~fosskers/transducers.el
+tasks:
+- test: |
+    cd transducers.el
+    emacs --batch -l transducers.el -l transducers-test.el  -f ert-run-tests-batch-and-exit
