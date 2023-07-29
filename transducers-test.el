@@ -19,5 +19,7 @@
   (should (string-equal "HELLO" (t/transduce (t/map #'upcase) #'t/string "hello"))))
 
 (ert-deftest transducers-zip ()
-  (should (equal '(5 7 9) (t/transduce (t/map #'+) #'t/cons '(1 2 3) '(4 5 6 7))))
-  (should (equal '(6 8 10) (t/transduce (t/map #'+) #'t/cons '(1 2 3 4) '(5 6 7)))))
+  (should (equal '(5 7 9)  (t/transduce (t/map #'+) #'t/cons '(1 2 3) '(4 5 6 7))))
+  (should (equal '(6 8 10) (t/transduce (t/map #'+) #'t/cons '(1 2 3 4) '(5 6 7))))
+  (should (equal [5 7 9]   (t/transduce (t/map #'+) #'t/vector [1 2 3] [4 5 6 7])))
+  (should (equal [6 8 10]  (t/transduce (t/map #'+) #'t/vector [1 2 3 4] [5 6 7]))))

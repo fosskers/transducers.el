@@ -94,22 +94,20 @@ F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
 \"element\" or \"zero\" value), ARR is our guaranteed source
 array, and ARRS are any additional source arrays."
-  (let ((len (length arr)))
+  (let ((shortest (apply #'min (length arr) (mapcar #'length arrs))))
     (cl-labels ((recurse (acc i)
-                  (if (= i len)
+                  (if (= i shortest)
                       acc
-                    (let ((acc (funcall f acc (aref arr i))))
+                    (let ((acc (apply f acc (aref arr i) (mapcar (lambda (a) (aref a i)) arrs))))
                       (if (reduced-p acc)
                           (reduced-val acc)
                         (recurse acc (1+ i)))))))
       (recurse identity 0))))
 
-;; (apply #'min (length [1 2 3]) (mapcar #'length '([1 2] [1 2 3 4])))
-
 ;; --- Transducers --- ;;
 
 (defun t/pass (reducer)
-  "Just pass along each value of the transduction.
+  "Transducer: Just pass along each value of the transduction.
 
 Same in intent with applying `t/map' to `identity', but this
 should be slightly more efficient. It is at least shorter to
@@ -124,7 +122,7 @@ so there is no need for the caller to manually pass a REDUCER."
 ;; (t/transduce #'t/pass #'+ '(1 2 3))
 
 (defun t/map (f)
-  "Apply a function F to all elements of the transduction."
+  "Transducer: Apply a function F to all elements of the transduction."
   (lambda (reducer)
     (lambda (result &rest inputs)
       (if inputs (funcall reducer result (apply f inputs))
@@ -136,7 +134,7 @@ so there is no need for the caller to manually pass a REDUCER."
 ;; --- Reducers --- ;;
 
 (defun t/cons (&rest vargs)
-  "Collect all results as a list.
+  "Reducer: Collect all results as a list.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
@@ -148,7 +146,7 @@ two arguments."
 ;; (t/transduce (t/map #'1+) #'t/cons '(1 2 3))
 
 (defun t/string (&rest vargs)
-  "Collect all results as a string.
+  "Reducer: Collect all results as a string.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
@@ -158,7 +156,7 @@ two arguments."
     (`() '())))
 
 (defun t/vector (&rest vargs)
-  "Collect all results as a vector.
+  "Reducer: Collect all results as a vector.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
@@ -168,7 +166,7 @@ two arguments."
     (`() '())))
 
 (defun t/count (&rest vargs)
-  "Count the number of elements that made it through the transduction.
+  "Reducer: Count the number of elements that made it through the transduction.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
@@ -178,7 +176,7 @@ two arguments."
     (`() 0)))
 
 (defun t/average (fallback)
-  "Calculate the average value of all numeric elements in a transduction.
+  "Reducer: Calculate the average value of all numeric elements in a transduction.
 
 A FALLBACK must be provided in case no elements made it through
 the transduction (thus protecting from division-by-zero)."
