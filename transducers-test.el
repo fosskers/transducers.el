@@ -12,6 +12,12 @@
   (should (= 0 (t/transduce #'t/pass #'t/count [])))
   (should (= 3 (t/transduce #'t/pass #'t/count [1 2 3]))))
 
+(ert-deftest transducers-predicates ()
+  (should (not (t/transduce #'t/pass (t/any #'cl-evenp) '(1 3 5 7 9))))
+  (should (t/transduce #'t/pass (t/any #'cl-evenp) '(1 3 5 7 9 2)))
+  (should (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9)))
+  (should (not (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9 2)))))
+
 (ert-deftest transducers-map ()
   (should (equal '() (t/transduce (t/map #'1+) #'t/cons '())))
   (should (equal '(2 3 4) (t/transduce (t/map #'1+) #'t/cons '(1 2 3))))

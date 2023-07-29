@@ -188,5 +188,36 @@ the transduction (thus protecting from division-by-zero)."
                    (/ acc items)))
         (`() 0)))))
 
+(defun t/any (pred)
+  "Reducer: Yield non-nil if any element in the transduction satisfies PRED.
+
+Short-circuits the transduction as soon as the condition is met."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,_ ,input) (if (funcall pred input)
+                        ;; NOTE We manually return `t' here because there is no
+                        ;; guarantee that `input' iteslf was not `nil' and still
+                        ;; passed the `if' when given to `pred'!
+                        (make-reduced :val t)
+                      nil))
+      (`(,acc) acc)
+      (_ nil))))
+
+;; (t/transduce #'t/pass (t/any #'cl-evenp) '(1 3 5 7 9 2))
+
+(defun t/all (pred)
+  "Reducer: Yield non-nil if all elements of the transduction satisfy PRED.
+
+Short-circuits with nil if any element fails the test."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,acc ,input) (if (and acc (funcall pred input))
+                          t
+                        (make-reduced :val nil)))
+      (`(,acc) acc)
+      (_ t))))
+
+;; (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9))
+
 (provide 'transducers)
 ;;; transducers.el ends here
