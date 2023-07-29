@@ -40,21 +40,13 @@ reducer function F, a concrete list SOURCE, and any number of
 additional lists SOURCES, perform a full, strict transduction."
   (transducers--list-transduce xform f source sources))
 
-(cl-defmethod t/transduce (xform f (source vector) &rest sources)
-  "Transduce over vectors.
+(cl-defmethod t/transduce (xform f (source array) &rest sources)
+  "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete vector SOURCE, and any number of
-additional vector SOURCES, perform a full, strict transduction."
-  (transducers--vector-transduce xform f source sources))
-
-(cl-defmethod t/transduce (xform f (source string) &rest sources)
-  "Transduce over strings.
-
-Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete string SOURCE, and any number of
-additional string SOURCES, perform a full, strict transduction."
-  (transducers--vector-transduce xform f source sources))
+reducer function F, a concrete array SOURCE, and any number of
+additional array SOURCES, perform a full, strict transduction."
+  (transducers--array-transduce xform f source sources))
 
 (defun transducers--list-transduce (xform f coll &optional colls)
   "Transduce over lists.
@@ -84,29 +76,29 @@ list, and COLLS are any additional source lists."
                       (recurse v (cdr items) (mapcar #'cdr extras)))))))
     (recurse identity coll colls)))
 
-(defun transducers--vector-transduce (xform f coll &optional colls)
-  "Transduce over vectors.
+(defun transducers--array-transduce (xform f coll &optional colls)
+  "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete list COLL, and any number of
-additional lists COLLS, perform a full, strict transduction."
+reducer function F, a concrete array COLL, and any number of
+additional array COLLS, perform a full, strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (transducers--vector-reduce xf init coll colls)))
+         (result (transducers--array-reduce xf init coll colls)))
     (funcall xf result)))
 
-(defun transducers--vector-reduce (f identity vec &optional vecs)
-  "Reduce over vectors.
+(defun transducers--array-reduce (f identity arr &optional arrs)
+  "Reduce over arrays.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), VEC is our guaranteed source
-vector, and VECS are any additional source vectors."
-  (let ((len (length vec)))
+\"element\" or \"zero\" value), ARR is our guaranteed source
+array, and ARRS are any additional source arrays."
+  (let ((len (length arr)))
     (cl-labels ((recurse (acc i)
                   (if (= i len)
                       acc
-                    (let ((acc (funcall f acc (aref vec i))))
+                    (let ((acc (funcall f acc (aref arr i))))
                       (if (reduced-p acc)
                           (reduced-val acc)
                         (recurse acc (1+ i)))))))
