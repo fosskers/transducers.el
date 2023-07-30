@@ -131,6 +131,16 @@ so there is no need for the caller to manually pass a REDUCER."
 ;; (t/transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
 ;; (t/transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
 
+(defun t/filter (pred)
+  "Transducer: Only keep elements from the transduction that satisfy PRED."
+  (lambda (reducer)
+    (lambda (result &rest inputs)
+      (if inputs
+          (if (apply pred inputs)
+              (apply reducer result inputs)
+            result)
+        (funcall reducer result)))))
+
 ;; --- Reducers --- ;;
 
 (defun t/cons (&rest vargs)
@@ -218,6 +228,30 @@ Short-circuits with nil if any element fails the test."
       (_ t))))
 
 ;; (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9))
+
+(defun t/first (default)
+  "Reducer: Yield the first value of the transduction.
+
+If there wasn't one, yields the DEFAULT."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,_ ,input) (make-reduced :val input))
+      (`(,acc) acc)
+      (_ default))))
+
+;; (t/transduce (t/filter #'cl-oddp) (t/first 0) '(2 4 6 7 10))
+
+(defun t/last (default)
+  "Reducer: Yield the last value of the transduction.
+
+If there wasn't one, yields the DEFAULT."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,_ ,input) input)
+      (`(,acc) acc)
+      (_ default))))
+
+;; (t/transduce #'t/pass (t/last 'none) '(2 4 6 7 10))
 
 (provide 'transducers)
 ;;; transducers.el ends here

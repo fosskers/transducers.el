@@ -18,6 +18,10 @@
   (should (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9)))
   (should (not (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9 2)))))
 
+(ert-deftest transducers-first-last ()
+  (should (= 7  (t/transduce (t/filter #'cl-oddp) (t/first 0) '(2 4 6 7 10))))
+  (should (= 10 (t/transduce #'t/pass (t/last 0) '(2 4 6 7 10)))))
+
 (ert-deftest transducers-map ()
   (should (equal '() (t/transduce (t/map #'1+) #'t/cons '())))
   (should (equal '(2 3 4) (t/transduce (t/map #'1+) #'t/cons '(1 2 3))))
@@ -29,3 +33,9 @@
   (should (equal '(6 8 10) (t/transduce (t/map #'+) #'t/cons '(1 2 3 4) '(5 6 7))))
   (should (equal [5 7 9]   (t/transduce (t/map #'+) #'t/vector [1 2 3] [4 5 6 7])))
   (should (equal [6 8 10]  (t/transduce (t/map #'+) #'t/vector [1 2 3 4] [5 6 7]))))
+
+(ert-deftest transducers-filter ()
+  (should (equal '(2 4) (t/transduce (t/filter #'cl-evenp) #'t/cons '(1 2 3 4 5)))))
+  ;; (should (equal '(2 5 8) (t/transduce (t/filter-map #'first) #'t/cons '(() (2 3) () (5 6) () (8 9))))))
+  ;; (should (equal '(1 2 3 "abc") (t/transduce #'t:unique #'t/cons '(1 2 1 3 2 1 2 "abc"))))
+  ;; (should (equal '(1 2 3 4 3) (t:transduce #'t:dedup #'t:cons '(1 1 1 2 2 2 3 3 3 4 3 3)))))
