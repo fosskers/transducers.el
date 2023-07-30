@@ -25,6 +25,12 @@
   "A wrapper that signals that reduction has completed."
   val)
 
+(defun transducers--ensure-reduced (x)
+  "Ensure that X is reduced."
+  (if (reduced-p x)
+      x
+    (make-reduced :val x)))
+
 (cl-defgeneric t/transduce (xform f source &rest sources)
   "The entry-point for processing some data source via transductions.
 
@@ -140,6 +146,72 @@ so there is no need for the caller to manually pass a REDUCER."
               (apply reducer result inputs)
             result)
         (funcall reducer result)))))
+
+(defun t/filter-map (f)
+  "Transducer: Filter all non-nil results of the application of F."
+  (lambda (reducer)
+    (lambda (result &rest inputs)
+      (if inputs (let ((x (apply f inputs)))
+                   (if x (funcall reducer result x)
+                     result))
+        (funcall reducer result)))))
+
+;; (t/transduce (t/filter-map #'car) #'t/cons '(() (2 3) () (5 6) () (8 9)))
+
+(defun t/drop (n)
+  "Transducer: Drop the first N elements of the transduction."
+  (lambda (reducer)
+    (let ((new-n (1+ n)))
+      (lambda (result &rest inputs)
+        (if inputs (progn (setq new-n (1- new-n))
+                          (if (> new-n 0)
+                              result
+                            (apply reducer result inputs)))
+          (funcall reducer result))))))
+
+;; (t/transduce (t/drop 3) #'t/cons '(1 2 3 4 5))
+
+(defun t/drop-while (pred)
+  "Transducer: Drop elements from the front of the transduction that satisfy PRED."
+  (lambda (reducer)
+    (let ((drop? t))
+      (lambda (result &rest inputs)
+        (if inputs (if (and drop? (apply pred inputs))
+                       result
+                     (progn (setq drop? nil)
+                            (apply reducer result inputs)))
+          (funcall reducer result))))))
+
+;; (t/transduce (t/drop-while #'cl-evenp) #'t/cons '(2 4 6 7 8 9))
+
+(defun t/take (n)
+  "Transducer: Keep only the first N elements of the transduction."
+  (lambda (reducer)
+    (let ((new-n n))
+      (lambda (result &rest inputs)
+        (if inputs (let ((result (if (> new-n 0)
+                                     (apply reducer result inputs)
+                                   result)))
+                     (setq new-n (1- new-n))
+                     (if (<= new-n 0)
+                         (transducers--ensure-reduced result)
+                       result))
+          (funcall reducer result))))))
+
+;; (t/transduce (t/take 3) #'t/cons '(1 2 3 4 5))
+;; (t/transduce (t/take 0) #'t/cons '(1 2 3 4 5))
+
+(defun t/take-while (pred)
+  "Transducer: Keep only elements which satisfy PRED.
+Stops the transduction as soon as any element fails the test."
+  (lambda (reducer)
+    (lambda (result &rest inputs)
+      (if inputs (if (not (apply pred inputs))
+                     (make-reduced :val result)
+                   (apply reducer result inputs))
+        (funcall reducer result)))))
+
+;; (t/transduce (t/take-while #'cl-evenp) #'t/cons '(2 4 6 8 9 2))
 
 ;; --- Reducers --- ;;
 
