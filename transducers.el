@@ -253,5 +253,48 @@ If there wasn't one, yields the DEFAULT."
 
 ;; (t/transduce #'t/pass (t/last 'none) '(2 4 6 7 10))
 
+(defun t/fold (f seed)
+  "Reducer: The fundamental reducer.
+
+`t/fold' creates an ad-hoc reducer based on a given 2-argument
+function F. A SEED is also required as the initial accumulator
+value, which also becomes the return value in case there were no
+input left in the transduction.
+
+Functions like `+' and `*' are automatically valid reducers,
+because they yield sane values even when given 0 or 1 arguments.
+Other functions like `max' cannot be used as-is as reducers since
+they require at least 2 arguments. For functions like this,
+`t/fold' is appropriate."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,acc ,input) (funcall f acc input))
+      (`(, acc) acc)
+      (_ seed))))
+
+(defun t/max (default)
+  "Reducer: Yield the maximum value of the transduction.
+
+If there wasn't one, yields the DEFAULT."
+  (t/fold #'max default))
+
+(defun t/min (default)
+  "Reducer: Yield the minimum value of the transduction.
+
+If there wasn't one, yields the DEFAULT."
+  (t/fold #'min default))
+
+(defun t/find (pred)
+  "Reducer: Find the first element in the transduction that satisfies a given PRED.
+
+Yields nil if no such element were found."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,_ ,input) (if (funcall pred input)
+                        (make-reduced :val input)
+                      nil))
+      (`(,acc) acc)
+      (_ nil))))
+
 (provide 'transducers)
 ;;; transducers.el ends here

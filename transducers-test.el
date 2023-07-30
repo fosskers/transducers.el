@@ -10,7 +10,9 @@
   (should (= 0 (t/transduce #'t/pass #'t/count '())))
   (should (= 3 (t/transduce #'t/pass #'t/count '(1 2 3))))
   (should (= 0 (t/transduce #'t/pass #'t/count [])))
-  (should (= 3 (t/transduce #'t/pass #'t/count [1 2 3]))))
+  (should (= 3 (t/transduce #'t/pass #'t/count [1 2 3])))
+  (should (= 0 (t/transduce #'t/pass #'t/count "")))
+  (should (= 3 (t/transduce #'t/pass #'t/count "cat"))))
 
 (ert-deftest transducers-predicates ()
   (should (not (t/transduce #'t/pass (t/any #'cl-evenp) '(1 3 5 7 9))))
@@ -21,6 +23,10 @@
 (ert-deftest transducers-first-last ()
   (should (= 7  (t/transduce (t/filter #'cl-oddp) (t/first 0) '(2 4 6 7 10))))
   (should (= 10 (t/transduce #'t/pass (t/last 0) '(2 4 6 7 10)))))
+
+(ert-deftest transducers-folding-finding ()
+  (should (= 1000 (t/transduce #'t/pass (t/fold #'max 0) '(1 2 3 4 1000 5 6))))
+  (should (= 6    (t/transduce #'t/pass (t/find #'cl-evenp) '(1 3 5 6 9)))))
 
 (ert-deftest transducers-map ()
   (should (equal '() (t/transduce (t/map #'1+) #'t/cons '())))
