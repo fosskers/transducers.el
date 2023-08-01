@@ -54,3 +54,9 @@
   (should (equal '(1 2 3) (t/transduce (t/take 3) #'t/cons '(1 2 3 4 5))))
   (should (equal '() (t/transduce (t/take-while #'cl-evenp) #'t/cons '(1))))
   (should (equal '(2 4 6 8) (t/transduce (t/take-while #'cl-evenp) #'t/cons '(2 4 6 8 9 2)))))
+
+(ert-deftest transducers-flattening ()
+  (should (equal '(1 2 3 4 5 6 7 8 9)
+                 (t/transduce #'t/concatenate #'t/cons '((1 2 3) (4 5 6) (7 8 9)))))
+  (should (equal '(1 2 3 0 4 5 6 0 7 8 9 0)
+                 (t/transduce #'t/flatten #'t/cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0)))))

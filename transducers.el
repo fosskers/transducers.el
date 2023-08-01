@@ -31,6 +31,20 @@
       x
     (make-reduced :val x)))
 
+(defun transducers--preserving-reduced (reducer)
+  "Given a REDUCER, wraps a reduced value twice.
+This is because reducing functions (like
+`transducers--list-reduce') unwraps them. `t/concatenate' is a
+good example: it re-uses its reducer on its input using
+list-reduce. If that reduction finishes early and returns a
+reduced value, `transducers--list-reduce' would unreduce' that
+value and try to continue the transducing process."
+  (lambda (a b)
+    (let ((result (funcall reducer a b)))
+      (if (reduced-p result)
+          (make-reduced :val result)
+        result))))
+
 (cl-defgeneric t/transduce (xform f source &rest sources)
   "The entry-point for processing some data source via transductions.
 
@@ -212,6 +226,38 @@ Stops the transduction as soon as any element fails the test."
         (funcall reducer result)))))
 
 ;; (t/transduce (t/take-while #'cl-evenp) #'t/cons '(2 4 6 8 9 2))
+
+(defun t/concatenate (reducer)
+  "Transducer: Concatenate all the sublists in the transduction.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (let ((preserving-reducer (transducers--preserving-reduced reducer)))
+    (lambda (result &optional inputs)
+      (if inputs (transducers--list-reduce preserving-reducer result inputs)
+        (funcall reducer result)))))
+
+;; (t/transduce #'t/concatenate #'t/cons '((1 2 3) (4 5 6) (7 8 9)))
+
+(defun t/flatten (reducer)
+  "Transducer: Entirely flatten all lists in the transduction.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (lambda (result &rest inputs)
+    ;; FIXME Tue Aug  1 21:07:16 2023
+    ;;
+    ;; Only considers the first input element.
+    (if inputs (let ((input (car inputs)))
+                 ;; FIXME Tue Aug  1 21:09:53 2023
+                 ;;
+                 ;; Why is this only considering lists?
+                 (if (listp input)
+                     (transducers--list-reduce (transducers--preserving-reduced (t/flatten reducer)) result input)
+                   (funcall reducer result input)))
+      (funcall reducer result))))
+
+;; (t/transduce #'t/flatten #'t/cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
 
 ;; --- Reducers --- ;;
 
