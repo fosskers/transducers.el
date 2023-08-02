@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "25.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -26,10 +26,10 @@
   "A wrapper that signals that reduction has completed."
   val)
 
-(defun transducers--ensure-function (arg)
+(defun t/ensure-function (arg)
   "Is some ARG a function?"
   (cond ((functionp arg) arg)
-        ((symbolp arg) (transducers--ensure-function (symbol-function arg)))
+        ((symbolp arg) (t/ensure-function (symbol-function arg)))
         (t (error "Argument is not a function: %s" arg))))
 
 (defun t/comp (function &rest functions)
@@ -38,8 +38,8 @@
 Any number of FUNCTIONS can be given. You're free to pass either
 lambdas or named functions by their symbol."
   (cl-reduce (lambda (f g)
-               (let ((f (transducers--ensure-function f))
-                     (g (transducers--ensure-function g)))
+               (let ((f (t/ensure-function f))
+                     (g (t/ensure-function g)))
                  (lambda (&rest arguments) (funcall f (apply g arguments)))))
              functions
              :initial-value function))
