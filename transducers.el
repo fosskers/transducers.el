@@ -692,5 +692,39 @@ Yields nil if no such element were found."
 
 ;; (t-transduce (t-take 4) #'t-cons (t-repeat 9))
 
+(cl-defun t-ints (start &key (step 1))
+  "Source: Yield all integers.
+
+The generation begins with START and advances by an optional STEP
+value which can be positive or negative. If you only want a
+specific range within the transduction, then use `t-take-while'
+within your transducer chain."
+  (let* ((curr start)
+         (func (lambda ()
+                 (let ((old curr))
+                   (setf curr (+ curr step))
+                   old))))
+    (make-t-generator :func func)))
+
+;; (t-transduce (t-take 10) #'t-cons (t-ints 0 :step 2))
+
+(defun t-random (limit)
+  "Source: Yield an endless stream of random numbers.
+
+The numbers generated will be between 0 and LIMIT - 1."
+  (make-t-generator :func (lambda () (cl-random limit))))
+
+;; (t-transduce (t-take 25) #'t-cons (t-random 10))
+
+(defun t-shuffle (arr)
+  "Source: Endlessly yield random elements from a given array ARR.
+
+Recall that both vectors and strings are considered Arrays."
+  (let* ((len (length arr))
+         (func (lambda () (aref arr (cl-random len)))))
+    (make-t-generator :func func)))
+
+;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Tamayo" "Natsume"]))
+
 (provide 'transducers)
 ;;; transducers.el ends here
