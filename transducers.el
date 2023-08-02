@@ -441,6 +441,30 @@ The first element of the transduction is always included."
 
 ;; (t/transduce (t/step 2) #'t/cons '(1 2 3 4 5 6 7 8 9))
 
+(defun t/scan (f seed)
+  "Transducer: Build up values from the results of previous applications of F.
+
+The function F must accept at least two arguments: the previous
+result of F and any current transducer elements. For the very
+first application, the given SEED value is used as the initial
+\"previous\"."
+  (lambda (reducer)
+    (let ((prev seed))
+      (lambda (result &rest inputs)
+        (if inputs (let* ((old prev)
+                          (result (funcall reducer result old)))
+                     (if (reduced-p result) result
+                       (let ((new (apply f prev inputs)))
+                         (setf prev new)
+                         result)))
+          (let ((result (funcall reducer result prev)))
+            (if (reduced-p result)
+                (funcall reducer (reduced-val result))
+              (funcall reducer result))))))))
+
+;; (t/transduce (t/scan #'+ 0) #'t/cons '(1 2 3 4))
+;; (t/transduce (t/comp (t/scan #'+ 0) (t/take 2)) #'t/cons '(1 2 3 4))
+
 ;; --- Reducers --- ;;
 
 (defun t/cons (&rest vargs)
