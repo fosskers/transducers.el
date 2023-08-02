@@ -400,11 +400,27 @@ so there is no need for the caller to manually pass a REDUCER."
     (lambda (result &rest inputs)
       (if inputs (if (gethash (car inputs) seen) ;; FIXME Only considers first input.
                      result
-                     (progn (puthash (car inputs) t seen)
-                            (funcall reducer result (car inputs))))
-          (funcall reducer result)))))
+                   (progn (puthash (car inputs) t seen)
+                          (funcall reducer result (car inputs))))
+        (funcall reducer result)))))
 
 ;; (t/transduce #'t/unique #'t/cons '(1 2 1 3 2 1 2 "abc"))
+
+(defun t/dedup (reducer)
+  "Transducer: Remove adjacent duplicates from the transduction.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (let ((prev 'nothing))
+    (lambda (result &rest inputs)
+      (if inputs (let ((input (car inputs)))
+                   (if (equal prev input)
+                       result
+                     (progn (setf prev input)
+                            (funcall reducer result input))))
+        (funcall reducer result)))))
+
+;; (t/transduce #'t/dedup #'t/cons '(1 1 1 2 2 2 3 3 3 4 3 3))
 
 ;; --- Reducers --- ;;
 

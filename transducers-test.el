@@ -43,8 +43,8 @@
 (ert-deftest transducers-filter ()
   (should (equal '(2 4)   (t/transduce (t/filter #'cl-evenp) #'t/cons '(1 2 3 4 5))))
   (should (equal '(2 5 8) (t/transduce (t/filter-map #'car) #'t/cons '(() (2 3) () (5 6) () (8 9)))))
-  (should (equal '(1 2 3 "abc") (t/transduce #'t/unique #'t/cons '(1 2 1 3 2 1 2 "abc")))))
-  ;; (should (equal '(1 2 3 4 3) (t/transduce #'t/dedup #'t/cons '(1 1 1 2 2 2 3 3 3 4 3 3)))))
+  (should (equal '(1 2 3 "abc") (t/transduce #'t/unique #'t/cons '(1 2 1 3 2 1 2 "abc"))))
+  (should (equal '(1 2 3 4 3) (t/transduce #'t/dedup #'t/cons '(1 1 1 2 2 2 3 3 3 4 3 3)))))
 
 (ert-deftest transducers-taking-dropping ()
   (should (equal '() (t/transduce (t/drop 100) #'t/cons '(1 2 3 4 5))))
