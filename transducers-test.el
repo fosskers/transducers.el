@@ -82,3 +82,23 @@
   (should (equal '(0 1)
                  (t-transduce (t-comp (t-scan #'+ 0) (t-take 2))
                               #'t-cons '(1 2 3 4)))))
+
+(ert-deftest transducers-composition ()
+  (should (equal '(12 20 30)
+                 (t-transduce (t-comp
+                                #'t-enumerate
+                                (t-map (lambda (pair) (* (car pair) (cdr pair))))
+                                (t-filter #'cl-evenp)
+                                (t-drop 3)
+                                (t-take 3))
+                              #'t-cons
+                              '(1 2 3 4 5 6 7 8 9 10)))))
+
+(ert-deftest transducers-generators ()
+  (should (equal '() (t-transduce (t-take 0) #'t-cons (t-ints 0))))
+  (should (equal '(0 1 2 3) (t-transduce (t-take 4) #'t-cons (t-ints 0))))
+  (should (equal '(0 -1 -2 -3) (t-transduce (t-take 4) #'t-cons (t-ints 0 :step -1))))
+  (should (equal '(1 2 3 1 2 3 1) (t-transduce (t-take 7) #'t-cons (t-cycle '(1 2 3)))))
+  (should (equal '(1 2 3 1 2 3 1) (t-transduce (t-take 7) #'t-cons (t-cycle [1 2 3]))))
+  (should (equal "hellohe" (t-transduce (t-take 7) #'t-string (t-cycle "hello"))))
+  (should (equal '() (t-transduce (t-take 7) #'t-cons (t-cycle '())))))
