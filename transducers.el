@@ -20,6 +20,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'ring)
 
 (cl-defstruct reduced
   "A wrapper that signals that reduction has completed."
@@ -374,7 +375,7 @@ This is different from `t/segment' which yields non-overlapping
 windows. If there were fewer items in the input than N, then this
 yields nothing."
   (unless (> n 0)
-    (error "The arguments to window must be a positive integer."))
+    (error "The arguments to window must be a positive integer"))
   (lambda (reducer)
     (let ((i 0)
           (q (make-ring n)))
@@ -421,6 +422,24 @@ so there is no need for the caller to manually pass a REDUCER."
         (funcall reducer result)))))
 
 ;; (t/transduce #'t/dedup #'t/cons '(1 1 1 2 2 2 3 3 3 4 3 3))
+
+(defun t/step (n)
+  "Transducer: Only yield every Nth element of the transduction.
+
+The first element of the transduction is always included."
+  (when (< n 1)
+    (error "The argument to skip must be greater than 0"))
+  (lambda (reducer)
+    (let ((curr 1))
+      (lambda (result &rest inputs)
+        (if inputs (if (= 1 curr)
+                       (progn (setf curr n)
+                              (apply reducer result inputs))
+                     (progn (setf curr (1- curr))
+                            result))
+          (funcall reducer result))))))
+
+;; (t/transduce (t/step 2) #'t/cons '(1 2 3 4 5 6 7 8 9))
 
 ;; --- Reducers --- ;;
 
