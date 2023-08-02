@@ -259,6 +259,114 @@ so there is no need for the caller to manually pass a REDUCER."
 
 ;; (t/transduce #'t/flatten #'t/cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
 
+(defun t/segment (n)
+  "Transducer: Partition the input into lists of N items.
+
+ If the input stops, flush any accumulated state, which may be
+shorter than N."
+  (unless (> n 0)
+    (error "The arguments to segment must be a positive integer"))
+  (lambda (reducer)
+    (let ((i 0)
+          (collect '()))
+      (lambda (result &rest inputs)
+        (cond (inputs
+               ;; FIXME Wed Aug  2 11:44:27 2023
+               ;;
+               ;; Only the first input is considered.
+               (setf collect (cons (car inputs) collect))
+               (setf i (1+ i))
+               (if (< i n)
+                   result
+                 (let ((next-input (reverse collect)))
+                   (setf i 0)
+                   (setf collect '())
+                   (funcall reducer result next-input))))
+              (t (let ((result (if (zerop i)
+                                   result
+                                 (funcall reducer result (reverse collect)))))
+                   (setf i 0)
+                   (if (reduced-p result)
+                       (funcall reducer (reduced-val result))
+                     (funcall reducer result)))))))))
+
+;; (t/transduce (t/segment 3) #'t/cons '(1 2 3 4 5))
+
+(defun t/group-by (f)
+  "Transducer: Group the input stream into sublists via some function F.
+
+The cutoff criterion is whether the return value of F changes
+between two consecutive elements of the transduction."
+  (lambda (reducer)
+    (let ((prev 'nothing)
+          (collect '()))
+      (lambda (result &rest inputs)
+        (if inputs (let* ((input (car inputs)) ;; FIXME Only considers the first input.
+                          (fout (funcall f input)))
+                     (if (or (equal fout prev) (eq prev 'nothing))
+                         (progn (setf prev fout)
+                                (setf collect (cons input collect))
+                                result)
+                       (let ((next-input (reverse collect)))
+                         (setf prev fout)
+                         (setf collect (list input))
+                         (funcall reducer result next-input))))
+          (let ((result (if (null collect)
+                            result
+                          (funcall reducer result (reverse collect)))))
+            (setf collect '())
+            (if (reduced-p result)
+                (funcall reducer (reduced-val result))
+              (funcall reducer result))))))))
+
+;; (t/transduce (t/group-by #'cl-evenp) #'t/cons '(2 4 6 7 9 1 2 4 6 3))
+
+(defun t/intersperse (elem)
+  "Transducer: Insert an ELEM between each value of the transduction."
+  (lambda (reducer)
+    (let ((send-elem? nil))
+      (lambda (result &rest inputs)
+        (if inputs (if send-elem?
+                       (let ((result (funcall reducer result elem)))
+                         (if (reduced-p result)
+                             result
+                           (funcall reducer result (car inputs))))
+                     (progn (setf send-elem? t)
+                            (funcall reducer result (car inputs))))
+          (funcall reducer result))))))
+
+;; (t/transduce (t/intersperse 0) #'t/cons '(1 2 3))
+
+(defun t/enumerate (reducer)
+  "Transducer: Index every value passed through the transduction into a cons pair.
+
+Starts at 0.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (let ((n 0))
+    (lambda (result &rest inputs)
+      (if inputs (let ((input (cons n (car inputs))))
+                   (setf n (1+ n))
+                   (funcall reducer result input))
+        (funcall reducer result)))))
+
+;; (t/transduce #'t/enumerate #'t/cons '("a" "b" "c"))
+
+(defun t/log (logger)
+  "Transducer: Call some LOGGER function for each step of the transduction.
+
+The LOGGER must accept the running results and the current
+\(potentially multiple) elements as input. The original results of
+the transduction are passed through as-is."
+  (lambda (reducer)
+    (lambda (result &rest inputs)
+      (if inputs (progn (apply logger result inputs)
+                        (apply reducer result inputs))
+        (funcall reducer result)))))
+
+;; (t/transduce (t/log (lambda (_ n) (message "Got: %d" n))) #'t/cons '(1 2 3 4 5))
+
 ;; --- Reducers --- ;;
 
 (defun t/cons (&rest vargs)

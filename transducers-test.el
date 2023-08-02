@@ -60,3 +60,11 @@
                  (t/transduce #'t/concatenate #'t/cons '((1 2 3) (4 5 6) (7 8 9)))))
   (should (equal '(1 2 3 0 4 5 6 0 7 8 9 0)
                  (t/transduce #'t/flatten #'t/cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0)))))
+
+(ert-deftest transducers-pairing ()
+  (should (equal '((1 2 3) (4 5))
+                 (t/transduce (t/segment 3) #'t/cons '(1 2 3 4 5))))
+  ;; (should (equal '((1 2 3) (2 3 4) (3 4 5))
+  ;;                (t/transduce (t/window 3) #'t/cons '(1 2 3 4 5))))
+  (should (equal '((2 4 6) (7 9 1) (2 4 6) (3))
+                 (t/transduce (t/group-by #'cl-evenp) #'t/cons '(2 4 6 7 9 1 2 4 6 3)))))
