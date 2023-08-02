@@ -367,6 +367,45 @@ the transduction are passed through as-is."
 
 ;; (t/transduce (t/log (lambda (_ n) (message "Got: %d" n))) #'t/cons '(1 2 3 4 5))
 
+(defun t/window (n)
+  "Transducer: Yield N-length windows of overlapping values.
+
+This is different from `t/segment' which yields non-overlapping
+windows. If there were fewer items in the input than N, then this
+yields nothing."
+  (unless (> n 0)
+    (error "The arguments to window must be a positive integer."))
+  (lambda (reducer)
+    (let ((i 0)
+          (q (make-ring n)))
+      (lambda (result &rest inputs)
+        (cond (inputs
+               (ring-insert-at-beginning q (car inputs))
+               (setf i (1+ i))
+               (if (< i n) result
+                 (funcall reducer result (ring-elements q))))
+              (t (funcall reducer result)))))))
+
+;; (t/transduce (t/window 3) #'t/cons '(1 2 3 4 5))
+
+(defun t/unique (reducer)
+  "Transducer: Only allow values to pass through the transduction once each.
+
+Stateful; this uses a set internally so could get quite heavy if
+you're not careful.
+
+This function is expected to be passed \"bare\" to `t/transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (let ((seen (make-hash-table :test #'equal)))
+    (lambda (result &rest inputs)
+      (if inputs (if (gethash (car inputs) seen) ;; FIXME Only considers first input.
+                     result
+                     (progn (puthash (car inputs) t seen)
+                            (funcall reducer result (car inputs))))
+          (funcall reducer result)))))
+
+;; (t/transduce #'t/unique #'t/cons '(1 2 1 3 2 1 2 "abc"))
+
 ;; --- Reducers --- ;;
 
 (defun t/cons (&rest vargs)
