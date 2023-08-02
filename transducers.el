@@ -726,5 +726,41 @@ Recall that both vectors and strings are considered Arrays."
 
 ;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Tamayo" "Natsume"]))
 
+(cl-defgeneric t-cycle (seq)
+  "Source: Yield the values of a given SEQ endlessly.")
+
+(cl-defmethod t-cycle ((seq list))
+  "Yield the values of a given list SEQ endlessly."
+  (if (null seq)
+      (make-t-generator :func (lambda () t-done))
+      (let* ((curr seq)
+             (func (lambda ()
+                     (cond ((null curr)
+                            (setf curr (cdr seq))
+                            (car seq))
+                           (t (let ((next (car curr)))
+                                (setf curr (cdr curr))
+                                next))))))
+        (make-t-generator :func func))))
+
+(cl-defmethod t-cycle ((seq array))
+  "Yield the values of a given array SEQ endlessly.
+
+This works for any type of array, like vectors and strings."
+  (if (zerop (length seq))
+      (make-t-generator :func (lambda () t-done))
+      (let* ((ix 0)
+             (len (length seq))
+             (func (lambda ()
+                     (cond ((>= ix len)
+                            (setf ix 1)
+                            (aref seq 0))
+                           (t (let ((next (aref seq ix)))
+                                (setf ix (1+ ix))
+                                next))))))
+        (make-t-generator :func func))))
+
+;; (t-transduce (t-take 10) #'t-cons (t-cycle '(1 2 3)))
+
 (provide 'transducers)
 ;;; transducers.el ends here
