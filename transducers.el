@@ -44,19 +44,19 @@ lambdas or named functions by their symbol."
              functions
              :initial-value function))
 
-(defun transducers--ensure-reduced (x)
+(defun t--ensure-reduced (x)
   "Ensure that X is reduced."
   (if (reduced-p x)
       x
     (make-reduced :val x)))
 
-(defun transducers--preserving-reduced (reducer)
+(defun t--preserving-reduced (reducer)
   "Given a REDUCER, wraps a reduced value twice.
 This is because reducing functions (like
-`transducers--list-reduce') unwraps them. `t-concatenate' is a
+`t--list-reduce') unwraps them. `t-concatenate' is a
 good example: it re-uses its reducer on its input using
 list-reduce. If that reduction finishes early and returns a
-reduced value, `transducers--list-reduce' would unreduce' that
+reduced value, `t--list-reduce' would unreduce' that
 value and try to continue the transducing process."
   (lambda (a b)
     (let ((result (funcall reducer a b)))
@@ -77,7 +77,7 @@ of additional SOURCES, perform a full, strict transduction.")
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete list SOURCE, and any number of
 additional lists SOURCES, perform a full, strict transduction."
-  (transducers--list-transduce xform f source sources))
+  (t--list-transduce xform f source sources))
 
 (cl-defmethod t-transduce (xform f (source array) &rest sources)
   "Transduce over arrays.
@@ -85,9 +85,9 @@ additional lists SOURCES, perform a full, strict transduction."
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete array SOURCE, and any number of
 additional array SOURCES, perform a full, strict transduction."
-  (transducers--array-transduce xform f source sources))
+  (t--array-transduce xform f source sources))
 
-(defun transducers--list-transduce (xform f coll &optional colls)
+(defun t--list-transduce (xform f coll &optional colls)
   "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
@@ -95,10 +95,10 @@ reducer function F, a concrete list COLL, and any number of
 additional lists COLLS, perform a full, strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (transducers--list-reduce xf init coll colls)))
+         (result (t--list-reduce xf init coll colls)))
     (funcall xf result)))
 
-(defun transducers--list-reduce (f identity coll &optional colls)
+(defun t--list-reduce (f identity coll &optional colls)
   "Reduce over lists.
 
 F is the transducer/reducer composition, IDENTITY the result of
@@ -115,7 +115,7 @@ list, and COLLS are any additional source lists."
                       (recurse v (cdr items) (mapcar #'cdr extras)))))))
     (recurse identity coll colls)))
 
-(defun transducers--array-transduce (xform f coll &optional colls)
+(defun t--array-transduce (xform f coll &optional colls)
   "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
@@ -123,10 +123,10 @@ reducer function F, a concrete array COLL, and any number of
 additional array COLLS, perform a full, strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (transducers--array-reduce xf init coll colls)))
+         (result (t--array-reduce xf init coll colls)))
     (funcall xf result)))
 
-(defun transducers--array-reduce (f identity arr &optional arrs)
+(defun t--array-reduce (f identity arr &optional arrs)
   "Reduce over arrays.
 
 F is the transducer/reducer composition, IDENTITY the result of
@@ -227,7 +227,7 @@ so there is no need for the caller to manually pass a REDUCER."
                                    result)))
                      (setq new-n (1- new-n))
                      (if (<= new-n 0)
-                         (transducers--ensure-reduced result)
+                         (t--ensure-reduced result)
                        result))
           (funcall reducer result))))))
 
@@ -251,9 +251,9 @@ Stops the transduction as soon as any element fails the test."
 
 This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
-  (let ((preserving-reducer (transducers--preserving-reduced reducer)))
+  (let ((preserving-reducer (t--preserving-reduced reducer)))
     (lambda (result &optional inputs)
-      (if inputs (transducers--list-reduce preserving-reducer result inputs)
+      (if inputs (t--list-reduce preserving-reducer result inputs)
         (funcall reducer result)))))
 
 ;; (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) (7 8 9)))
@@ -272,7 +272,7 @@ so there is no need for the caller to manually pass a REDUCER."
                  ;;
                  ;; Why is this only considering lists?
                  (if (listp input)
-                     (transducers--list-reduce (transducers--preserving-reduced (t-flatten reducer)) result input)
+                     (t--list-reduce (t--preserving-reduced (t-flatten reducer)) result input)
                    (funcall reducer result input)))
       (funcall reducer result))))
 
