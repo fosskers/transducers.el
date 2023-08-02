@@ -22,9 +22,16 @@
 (require 'cl-lib)
 (require 'ring)
 
-(cl-defstruct reduced
+(defconst t-done 't--done
+  "The signal that a generator source has finished generating values.")
+
+(cl-defstruct (t-reduced (:copier nil))
   "A wrapper that signals that reduction has completed."
   val)
+
+(cl-defstruct (t-generator (:copier nil))
+  "A wrapper around a function that can potentially yield endless values."
+  (func nil :read-only t))
 
 (defun t-ensure-function (arg)
   "Is some ARG a function?"
@@ -46,9 +53,9 @@ lambdas or named functions by their symbol."
 
 (defun t--ensure-reduced (x)
   "Ensure that X is reduced."
-  (if (reduced-p x)
+  (if (t-reduced-p x)
       x
-    (make-reduced :val x)))
+    (make-t-reduced :val x)))
 
 (defun t--preserving-reduced (reducer)
   "Given a REDUCER, wraps a reduced value twice.
@@ -60,8 +67,8 @@ reduced value, `t--list-reduce' would unreduce' that
 value and try to continue the transducing process."
   (lambda (a b)
     (let ((result (funcall reducer a b)))
-      (if (reduced-p result)
-          (make-reduced :val result)
+      (if (t-reduced-p result)
+          (make-t-reduced :val result)
         result))))
 
 (cl-defgeneric t-transduce (xform f source &rest sources)
@@ -87,6 +94,15 @@ reducer function F, a concrete array SOURCE, and any number of
 additional array SOURCES, perform a full, strict transduction."
   (t--array-transduce xform f source sources))
 
+(cl-defmethod t-transduce (xform f (source t-generator) &rest sources)
+  "Transduce over generators.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete generator SOURCE, and any number
+of additional generator SOURCES, perform a full, strict
+transduction."
+  (t--generator-transduce xform f source sources))
+
 (defun t--list-transduce (xform f coll &optional colls)
   "Transduce over lists.
 
@@ -110,8 +126,8 @@ list, and COLLS are any additional source lists."
                         (cl-some #'not extras))
                     acc
                   (let ((v (apply f acc (car items) (mapcar #'car extras))))
-                    (if (reduced-p v)
-                        (reduced-val v)
+                    (if (t-reduced-p v)
+                        (t-reduced-val v)
                       (recurse v (cdr items) (mapcar #'cdr extras)))))))
     (recurse identity coll colls)))
 
@@ -138,10 +154,40 @@ array, and ARRS are any additional source arrays."
                   (if (= i shortest)
                       acc
                     (let ((acc (apply f acc (aref arr i) (mapcar (lambda (a) (aref a i)) arrs))))
-                      (if (reduced-p acc)
-                          (reduced-val acc)
+                      (if (t-reduced-p acc)
+                          (t-reduced-val acc)
                         (recurse acc (1+ i)))))))
       (recurse identity 0))))
+
+(defun t--generator-transduce (xform f coll &optional colls)
+  "Transduce over generators.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, a concrete generator COLL, and any number of
+additional generator COLLS, perform a full, strict transduction."
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (t--generator-reduce xf init coll colls)))
+    (funcall xf result)))
+
+;; FIXME Wed Aug  2 20:29:58 2023
+;;
+;; Handle multiple generators.
+(defun t--generator-reduce (f identity gen &rest _gens)
+  "Reduce over a generator.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), GEN is our guaranteed source
+array, and GENS are any additional source arrays."
+  (cl-labels ((recurse (acc)
+                (let ((val (funcall (t-generator-func gen))))
+                  (if (eq t-done val) acc
+                    (let ((acc (funcall f acc val)))
+                      (if (t-reduced-p acc)
+                          (t-reduced-val acc)
+                        (recurse acc)))))))
+    (recurse identity)))
 
 ;; --- Transducers --- ;;
 
@@ -240,7 +286,7 @@ Stops the transduction as soon as any element fails the test."
   (lambda (reducer)
     (lambda (result &rest inputs)
       (if inputs (if (not (apply pred inputs))
-                     (make-reduced :val result)
+                     (make-t-reduced :val result)
                    (apply reducer result inputs))
         (funcall reducer result)))))
 
@@ -305,8 +351,8 @@ shorter than N."
                                    result
                                  (funcall reducer result (reverse collect)))))
                    (setf i 0)
-                   (if (reduced-p result)
-                       (funcall reducer (reduced-val result))
+                   (if (t-reduced-p result)
+                       (funcall reducer (t-reduced-val result))
                      (funcall reducer result)))))))))
 
 ;; (t-transduce (t-segment 3) #'t-cons '(1 2 3 4 5))
@@ -334,8 +380,8 @@ between two consecutive elements of the transduction."
                             result
                           (funcall reducer result (reverse collect)))))
             (setf collect '())
-            (if (reduced-p result)
-                (funcall reducer (reduced-val result))
+            (if (t-reduced-p result)
+                (funcall reducer (t-reduced-val result))
               (funcall reducer result))))))))
 
 ;; (t-transduce (t-group-by #'cl-evenp) #'t-cons '(2 4 6 7 9 1 2 4 6 3))
@@ -347,7 +393,7 @@ between two consecutive elements of the transduction."
       (lambda (result &rest inputs)
         (if inputs (if send-elem?
                        (let ((result (funcall reducer result elem)))
-                         (if (reduced-p result)
+                         (if (t-reduced-p result)
                              result
                            (funcall reducer result (car inputs))))
                      (progn (setf send-elem? t)
@@ -471,13 +517,13 @@ first application, the given SEED value is used as the initial
       (lambda (result &rest inputs)
         (if inputs (let* ((old prev)
                           (result (funcall reducer result old)))
-                     (if (reduced-p result) result
+                     (if (t-reduced-p result) result
                        (let ((new (apply f prev inputs)))
                          (setf prev new)
                          result)))
           (let ((result (funcall reducer result prev)))
-            (if (reduced-p result)
-                (funcall reducer (reduced-val result))
+            (if (t-reduced-p result)
+                (funcall reducer (t-reduced-val result))
               (funcall reducer result))))))))
 
 ;; (t-transduce (t-scan #'+ 0) #'t-cons '(1 2 3 4))
@@ -550,7 +596,7 @@ Short-circuits the transduction as soon as the condition is met."
                         ;; NOTE We manually return `t' here because there is no
                         ;; guarantee that `input' iteslf was not `nil' and still
                         ;; passed the `if' when given to `pred'!
-                        (make-reduced :val t)
+                        (make-t-reduced :val t)
                       nil))
       (`(,acc) acc)
       (_ nil))))
@@ -565,7 +611,7 @@ Short-circuits with nil if any element fails the test."
     (pcase vargs
       (`(,acc ,input) (if (and acc (funcall pred input))
                           t
-                        (make-reduced :val nil)))
+                        (make-t-reduced :val nil)))
       (`(,acc) acc)
       (_ t))))
 
@@ -577,7 +623,7 @@ Short-circuits with nil if any element fails the test."
 If there wasn't one, yields the DEFAULT."
   (lambda (&rest vargs)
     (pcase vargs
-      (`(,_ ,input) (make-reduced :val input))
+      (`(,_ ,input) (make-t-reduced :val input))
       (`(,acc) acc)
       (_ default))))
 
@@ -633,10 +679,18 @@ Yields nil if no such element were found."
   (lambda (&rest vargs)
     (pcase vargs
       (`(,_ ,input) (if (funcall pred input)
-                        (make-reduced :val input)
+                        (make-t-reduced :val input)
                       nil))
       (`(,acc) acc)
       (_ nil))))
+
+;; --- Generators --- ;;
+
+(defun t-repeat (item)
+  "Source: Endlessly yield a given ITEM."
+  (make-t-generator :func (cl-constantly item)))
+
+;; (t-transduce (t-take 4) #'t-cons (t-repeat 9))
 
 (provide 'transducers)
 ;;; transducers.el ends here
