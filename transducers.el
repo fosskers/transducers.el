@@ -26,20 +26,20 @@
   "A wrapper that signals that reduction has completed."
   val)
 
-(defun t/ensure-function (arg)
+(defun t-ensure-function (arg)
   "Is some ARG a function?"
   (cond ((functionp arg) arg)
-        ((symbolp arg) (t/ensure-function (symbol-function arg)))
+        ((symbolp arg) (t-ensure-function (symbol-function arg)))
         (t (error "Argument is not a function: %s" arg))))
 
-(defun t/comp (function &rest functions)
+(defun t-comp (function &rest functions)
   "FUNCTION composition.
 
 Any number of FUNCTIONS can be given. You're free to pass either
 lambdas or named functions by their symbol."
   (cl-reduce (lambda (f g)
-               (let ((f (t/ensure-function f))
-                     (g (t/ensure-function g)))
+               (let ((f (t-ensure-function f))
+                     (g (t-ensure-function g)))
                  (lambda (&rest arguments) (funcall f (apply g arguments)))))
              functions
              :initial-value function))
@@ -53,7 +53,7 @@ lambdas or named functions by their symbol."
 (defun transducers--preserving-reduced (reducer)
   "Given a REDUCER, wraps a reduced value twice.
 This is because reducing functions (like
-`transducers--list-reduce') unwraps them. `t/concatenate' is a
+`transducers--list-reduce') unwraps them. `t-concatenate' is a
 good example: it re-uses its reducer on its input using
 list-reduce. If that reduction finishes early and returns a
 reduced value, `transducers--list-reduce' would unreduce' that
@@ -64,14 +64,14 @@ value and try to continue the transducing process."
           (make-reduced :val result)
         result))))
 
-(cl-defgeneric t/transduce (xform f source &rest sources)
+(cl-defgeneric t-transduce (xform f source &rest sources)
   "The entry-point for processing some data source via transductions.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete data SOURCE, and any number
 of additional SOURCES, perform a full, strict transduction.")
 
-(cl-defmethod t/transduce (xform f (source list) &rest sources)
+(cl-defmethod t-transduce (xform f (source list) &rest sources)
   "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
@@ -79,7 +79,7 @@ reducer function F, a concrete list SOURCE, and any number of
 additional lists SOURCES, perform a full, strict transduction."
   (transducers--list-transduce xform f source sources))
 
-(cl-defmethod t/transduce (xform f (source array) &rest sources)
+(cl-defmethod t-transduce (xform f (source array) &rest sources)
   "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
@@ -145,32 +145,32 @@ array, and ARRS are any additional source arrays."
 
 ;; --- Transducers --- ;;
 
-(defun t/pass (reducer)
+(defun t-pass (reducer)
   "Transducer: Just pass along each value of the transduction.
 
-Same in intent with applying `t/map' to `identity', but this
+Same in intent with applying `t-map' to `identity', but this
 should be slightly more efficient. It is at least shorter to
 type.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (lambda (result &rest inputs)
     (if inputs (apply reducer result inputs)
       (funcall reducer result))))
 
-;; (t/transduce #'t/pass #'+ '(1 2 3))
+;; (t-transduce #'t-pass #'+ '(1 2 3))
 
-(defun t/map (f)
+(defun t-map (f)
   "Transducer: Apply a function F to all elements of the transduction."
   (lambda (reducer)
     (lambda (result &rest inputs)
       (if inputs (funcall reducer result (apply f inputs))
         (funcall reducer result)))))
 
-;; (t/transduce (t/map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
-;; (t/transduce (t/map #'*) #'+ '(1 2 3) '(4 5 6 7))
+;; (t-transduce (t-map (lambda (n) (+ 1 n))) #'+ '(1 2 3))
+;; (t-transduce (t-map #'*) #'+ '(1 2 3) '(4 5 6 7))
 
-(defun t/filter (pred)
+(defun t-filter (pred)
   "Transducer: Only keep elements from the transduction that satisfy PRED."
   (lambda (reducer)
     (lambda (result &rest inputs)
@@ -180,7 +180,7 @@ so there is no need for the caller to manually pass a REDUCER."
             result)
         (funcall reducer result)))))
 
-(defun t/filter-map (f)
+(defun t-filter-map (f)
   "Transducer: Filter all non-nil results of the application of F."
   (lambda (reducer)
     (lambda (result &rest inputs)
@@ -189,9 +189,9 @@ so there is no need for the caller to manually pass a REDUCER."
                      result))
         (funcall reducer result)))))
 
-;; (t/transduce (t/filter-map #'car) #'t/cons '(() (2 3) () (5 6) () (8 9)))
+;; (t-transduce (t-filter-map #'car) #'t-cons '(() (2 3) () (5 6) () (8 9)))
 
-(defun t/drop (n)
+(defun t-drop (n)
   "Transducer: Drop the first N elements of the transduction."
   (lambda (reducer)
     (let ((new-n (1+ n)))
@@ -202,9 +202,9 @@ so there is no need for the caller to manually pass a REDUCER."
                             (apply reducer result inputs)))
           (funcall reducer result))))))
 
-;; (t/transduce (t/drop 3) #'t/cons '(1 2 3 4 5))
+;; (t-transduce (t-drop 3) #'t-cons '(1 2 3 4 5))
 
-(defun t/drop-while (pred)
+(defun t-drop-while (pred)
   "Transducer: Drop elements from the front of the transduction that satisfy PRED."
   (lambda (reducer)
     (let ((drop? t))
@@ -215,9 +215,9 @@ so there is no need for the caller to manually pass a REDUCER."
                             (apply reducer result inputs)))
           (funcall reducer result))))))
 
-;; (t/transduce (t/drop-while #'cl-evenp) #'t/cons '(2 4 6 7 8 9))
+;; (t-transduce (t-drop-while #'cl-evenp) #'t-cons '(2 4 6 7 8 9))
 
-(defun t/take (n)
+(defun t-take (n)
   "Transducer: Keep only the first N elements of the transduction."
   (lambda (reducer)
     (let ((new-n n))
@@ -231,10 +231,10 @@ so there is no need for the caller to manually pass a REDUCER."
                        result))
           (funcall reducer result))))))
 
-;; (t/transduce (t/take 3) #'t/cons '(1 2 3 4 5))
-;; (t/transduce (t/take 0) #'t/cons '(1 2 3 4 5))
+;; (t-transduce (t-take 3) #'t-cons '(1 2 3 4 5))
+;; (t-transduce (t-take 0) #'t-cons '(1 2 3 4 5))
 
-(defun t/take-while (pred)
+(defun t-take-while (pred)
   "Transducer: Keep only elements which satisfy PRED.
 Stops the transduction as soon as any element fails the test."
   (lambda (reducer)
@@ -244,24 +244,24 @@ Stops the transduction as soon as any element fails the test."
                    (apply reducer result inputs))
         (funcall reducer result)))))
 
-;; (t/transduce (t/take-while #'cl-evenp) #'t/cons '(2 4 6 8 9 2))
+;; (t-transduce (t-take-while #'cl-evenp) #'t-cons '(2 4 6 8 9 2))
 
-(defun t/concatenate (reducer)
+(defun t-concatenate (reducer)
   "Transducer: Concatenate all the sublists in the transduction.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (let ((preserving-reducer (transducers--preserving-reduced reducer)))
     (lambda (result &optional inputs)
       (if inputs (transducers--list-reduce preserving-reducer result inputs)
         (funcall reducer result)))))
 
-;; (t/transduce #'t/concatenate #'t/cons '((1 2 3) (4 5 6) (7 8 9)))
+;; (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) (7 8 9)))
 
-(defun t/flatten (reducer)
+(defun t-flatten (reducer)
   "Transducer: Entirely flatten all lists in the transduction.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (lambda (result &rest inputs)
     ;; FIXME Tue Aug  1 21:07:16 2023
@@ -272,13 +272,13 @@ so there is no need for the caller to manually pass a REDUCER."
                  ;;
                  ;; Why is this only considering lists?
                  (if (listp input)
-                     (transducers--list-reduce (transducers--preserving-reduced (t/flatten reducer)) result input)
+                     (transducers--list-reduce (transducers--preserving-reduced (t-flatten reducer)) result input)
                    (funcall reducer result input)))
       (funcall reducer result))))
 
-;; (t/transduce #'t/flatten #'t/cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
+;; (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
 
-(defun t/segment (n)
+(defun t-segment (n)
   "Transducer: Partition the input into lists of N items.
 
  If the input stops, flush any accumulated state, which may be
@@ -309,9 +309,9 @@ shorter than N."
                        (funcall reducer (reduced-val result))
                      (funcall reducer result)))))))))
 
-;; (t/transduce (t/segment 3) #'t/cons '(1 2 3 4 5))
+;; (t-transduce (t-segment 3) #'t-cons '(1 2 3 4 5))
 
-(defun t/group-by (f)
+(defun t-group-by (f)
   "Transducer: Group the input stream into sublists via some function F.
 
 The cutoff criterion is whether the return value of F changes
@@ -338,9 +338,9 @@ between two consecutive elements of the transduction."
                 (funcall reducer (reduced-val result))
               (funcall reducer result))))))))
 
-;; (t/transduce (t/group-by #'cl-evenp) #'t/cons '(2 4 6 7 9 1 2 4 6 3))
+;; (t-transduce (t-group-by #'cl-evenp) #'t-cons '(2 4 6 7 9 1 2 4 6 3))
 
-(defun t/intersperse (elem)
+(defun t-intersperse (elem)
   "Transducer: Insert an ELEM between each value of the transduction."
   (lambda (reducer)
     (let ((send-elem? nil))
@@ -354,14 +354,14 @@ between two consecutive elements of the transduction."
                             (funcall reducer result (car inputs))))
           (funcall reducer result))))))
 
-;; (t/transduce (t/intersperse 0) #'t/cons '(1 2 3))
+;; (t-transduce (t-intersperse 0) #'t-cons '(1 2 3))
 
-(defun t/enumerate (reducer)
+(defun t-enumerate (reducer)
   "Transducer: Index every value passed through the transduction into a cons pair.
 
 Starts at 0.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (let ((n 0))
     (lambda (result &rest inputs)
@@ -370,9 +370,9 @@ so there is no need for the caller to manually pass a REDUCER."
                    (funcall reducer result input))
         (funcall reducer result)))))
 
-;; (t/transduce #'t/enumerate #'t/cons '("a" "b" "c"))
+;; (t-transduce #'t-enumerate #'t-cons '("a" "b" "c"))
 
-(defun t/log (logger)
+(defun t-log (logger)
   "Transducer: Call some LOGGER function for each step of the transduction.
 
 The LOGGER must accept the running results and the current
@@ -384,12 +384,12 @@ the transduction are passed through as-is."
                         (apply reducer result inputs))
         (funcall reducer result)))))
 
-;; (t/transduce (t/log (lambda (_ n) (message "Got: %d" n))) #'t/cons '(1 2 3 4 5))
+;; (t-transduce (t-log (lambda (_ n) (message "Got: %d" n))) #'t-cons '(1 2 3 4 5))
 
-(defun t/window (n)
+(defun t-window (n)
   "Transducer: Yield N-length windows of overlapping values.
 
-This is different from `t/segment' which yields non-overlapping
+This is different from `t-segment' which yields non-overlapping
 windows. If there were fewer items in the input than N, then this
 yields nothing."
   (unless (> n 0)
@@ -405,15 +405,15 @@ yields nothing."
                  (funcall reducer result (ring-elements q))))
               (t (funcall reducer result)))))))
 
-;; (t/transduce (t/window 3) #'t/cons '(1 2 3 4 5))
+;; (t-transduce (t-window 3) #'t-cons '(1 2 3 4 5))
 
-(defun t/unique (reducer)
+(defun t-unique (reducer)
   "Transducer: Only allow values to pass through the transduction once each.
 
 Stateful; this uses a set internally so could get quite heavy if
 you're not careful.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (let ((seen (make-hash-table :test #'equal)))
     (lambda (result &rest inputs)
@@ -423,12 +423,12 @@ so there is no need for the caller to manually pass a REDUCER."
                           (funcall reducer result (car inputs))))
         (funcall reducer result)))))
 
-;; (t/transduce #'t/unique #'t/cons '(1 2 1 3 2 1 2 "abc"))
+;; (t-transduce #'t-unique #'t-cons '(1 2 1 3 2 1 2 "abc"))
 
-(defun t/dedup (reducer)
+(defun t-dedup (reducer)
   "Transducer: Remove adjacent duplicates from the transduction.
 
-This function is expected to be passed \"bare\" to `t/transduce',
+This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (let ((prev 'nothing))
     (lambda (result &rest inputs)
@@ -439,9 +439,9 @@ so there is no need for the caller to manually pass a REDUCER."
                             (funcall reducer result input))))
         (funcall reducer result)))))
 
-;; (t/transduce #'t/dedup #'t/cons '(1 1 1 2 2 2 3 3 3 4 3 3))
+;; (t-transduce #'t-dedup #'t-cons '(1 1 1 2 2 2 3 3 3 4 3 3))
 
-(defun t/step (n)
+(defun t-step (n)
   "Transducer: Only yield every Nth element of the transduction.
 
 The first element of the transduction is always included."
@@ -457,9 +457,9 @@ The first element of the transduction is always included."
                             result))
           (funcall reducer result))))))
 
-;; (t/transduce (t/step 2) #'t/cons '(1 2 3 4 5 6 7 8 9))
+;; (t-transduce (t-step 2) #'t-cons '(1 2 3 4 5 6 7 8 9))
 
-(defun t/scan (f seed)
+(defun t-scan (f seed)
   "Transducer: Build up values from the results of previous applications of F.
 
 The function F must accept at least two arguments: the previous
@@ -480,12 +480,12 @@ first application, the given SEED value is used as the initial
                 (funcall reducer (reduced-val result))
               (funcall reducer result))))))))
 
-;; (t/transduce (t/scan #'+ 0) #'t/cons '(1 2 3 4))
-;; (t/transduce (t/comp (t/scan #'+ 0) (t/take 2)) #'t/cons '(1 2 3 4))
+;; (t-transduce (t-scan #'+ 0) #'t-cons '(1 2 3 4))
+;; (t-transduce (t-comp (t-scan #'+ 0) (t-take 2)) #'t-cons '(1 2 3 4))
 
 ;; --- Reducers --- ;;
 
-(defun t/cons (&rest vargs)
+(defun t-cons (&rest vargs)
   "Reducer: Collect all results as a list.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
@@ -495,9 +495,9 @@ two arguments."
     (`(,acc) (reverse acc))
     (`() '())))
 
-;; (t/transduce (t/map #'1+) #'t/cons '(1 2 3))
+;; (t-transduce (t-map #'1+) #'t-cons '(1 2 3))
 
-(defun t/string (&rest vargs)
+(defun t-string (&rest vargs)
   "Reducer: Collect all results as a string.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
@@ -507,7 +507,7 @@ two arguments."
     (`(,acc) (cl-concatenate 'string (reverse acc)))
     (`() '())))
 
-(defun t/vector (&rest vargs)
+(defun t-vector (&rest vargs)
   "Reducer: Collect all results as a vector.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
@@ -517,7 +517,7 @@ two arguments."
     (`(,acc) (cl-concatenate 'vector (reverse acc)))
     (`() '())))
 
-(defun t/count (&rest vargs)
+(defun t-count (&rest vargs)
   "Reducer: Count the number of elements that made it through the transduction.
 
 Regardings VARGS: as a \"reducer\", this function expects zero to
@@ -527,7 +527,7 @@ two arguments."
     (`(,acc) acc)
     (`() 0)))
 
-(defun t/average (fallback)
+(defun t-average (fallback)
   "Reducer: Calculate the average value of all numeric elements in a transduction.
 
 A FALLBACK must be provided in case no elements made it through
@@ -540,7 +540,7 @@ the transduction (thus protecting from division-by-zero)."
                    (/ acc items)))
         (`() 0)))))
 
-(defun t/any (pred)
+(defun t-anyp (pred)
   "Reducer: Yield non-nil if any element in the transduction satisfies PRED.
 
 Short-circuits the transduction as soon as the condition is met."
@@ -555,9 +555,9 @@ Short-circuits the transduction as soon as the condition is met."
       (`(,acc) acc)
       (_ nil))))
 
-;; (t/transduce #'t/pass (t/any #'cl-evenp) '(1 3 5 7 9 2))
+;; (t-transduce #'t-pass (t-anyp #'cl-evenp) '(1 3 5 7 9 2))
 
-(defun t/all (pred)
+(defun t-allp (pred)
   "Reducer: Yield non-nil if all elements of the transduction satisfy PRED.
 
 Short-circuits with nil if any element fails the test."
@@ -569,9 +569,9 @@ Short-circuits with nil if any element fails the test."
       (`(,acc) acc)
       (_ t))))
 
-;; (t/transduce #'t/pass (t/all #'cl-oddp) '(1 3 5 7 9))
+;; (t-transduce #'t-pass (t-allp #'cl-oddp) '(1 3 5 7 9))
 
-(defun t/first (default)
+(defun t-first (default)
   "Reducer: Yield the first value of the transduction.
 
 If there wasn't one, yields the DEFAULT."
@@ -581,9 +581,9 @@ If there wasn't one, yields the DEFAULT."
       (`(,acc) acc)
       (_ default))))
 
-;; (t/transduce (t/filter #'cl-oddp) (t/first 0) '(2 4 6 7 10))
+;; (t-transduce (t-filter #'cl-oddp) (t-first 0) '(2 4 6 7 10))
 
-(defun t/last (default)
+(defun t-last (default)
   "Reducer: Yield the last value of the transduction.
 
 If there wasn't one, yields the DEFAULT."
@@ -593,12 +593,12 @@ If there wasn't one, yields the DEFAULT."
       (`(,acc) acc)
       (_ default))))
 
-;; (t/transduce #'t/pass (t/last 'none) '(2 4 6 7 10))
+;; (t-transduce #'t-pass (t-last 'none) '(2 4 6 7 10))
 
-(defun t/fold (f seed)
+(defun t-fold (f seed)
   "Reducer: The fundamental reducer.
 
-`t/fold' creates an ad-hoc reducer based on a given 2-argument
+`t-fold' creates an ad-hoc reducer based on a given 2-argument
 function F. A SEED is also required as the initial accumulator
 value, which also becomes the return value in case there were no
 input left in the transduction.
@@ -607,26 +607,26 @@ Functions like `+' and `*' are automatically valid reducers,
 because they yield sane values even when given 0 or 1 arguments.
 Other functions like `max' cannot be used as-is as reducers since
 they require at least 2 arguments. For functions like this,
-`t/fold' is appropriate."
+`t-fold' is appropriate."
   (lambda (&rest vargs)
     (pcase vargs
       (`(,acc ,input) (funcall f acc input))
       (`(, acc) acc)
       (_ seed))))
 
-(defun t/max (default)
+(defun t-max (default)
   "Reducer: Yield the maximum value of the transduction.
 
 If there wasn't one, yields the DEFAULT."
-  (t/fold #'max default))
+  (t-fold #'max default))
 
-(defun t/min (default)
+(defun t-min (default)
   "Reducer: Yield the minimum value of the transduction.
 
 If there wasn't one, yields the DEFAULT."
-  (t/fold #'min default))
+  (t-fold #'min default))
 
-(defun t/find (pred)
+(defun t-find (pred)
   "Reducer: Find the first element in the transduction that satisfies a given PRED.
 
 Yields nil if no such element were found."
