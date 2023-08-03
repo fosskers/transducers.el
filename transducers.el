@@ -111,13 +111,13 @@ of additional generator SOURCES, perform a full, strict
 transduction."
   (t--generator-transduce xform f source sources))
 
-(cl-defmethod t-transduce (xform f (source t-filepath) &rest sources)
-  "Transduce over files.
+(cl-defmethod t-transduce (xform f (source t-filepath) &rest _sources)
+  "Transduce over the lines of a file.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete filepath SOURCE, and any number of
-additional filepath SOURCES, perform a full, strict transduction."
-  (t--filepath-transduce xform f source sources))
+reducer function F, and a concrete filepath SOURCE, perform a
+full, strict transduction."
+  (t--filepath-transduce xform f source))
 
 (cl-defmethod t-transduce (xform f (source t-buffer) &rest sources)
   "Transduce over buffers.
@@ -213,25 +213,47 @@ array, and GENS are any additional source arrays."
                         (recurse acc)))))))
     (recurse identity)))
 
-(defun t--filepath-transduce (xform f coll &optional colls)
-  "Transduce over filepaths.
+(defun t--filepath-transduce (xform f file)
+  "Transduce over the lines of a file.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete filepath COLL, and any number of
-additional filepaths COLLS, perform a full, strict transduction."
+reducer function F, a concrete filepath FILE, perform a full,
+strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (t--filepath-reduce xf init coll colls)))
+         (result (t--filepath-reduce xf init file)))
     (funcall xf result)))
 
-(defun t--filepath-reduce (f identity path &rest _paths)
-  "Reduce over filepaths.
+(defun t--filepath-reduce (f identity file)
+  "Reduce over a filepath.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), PATH is our guaranteed source
-filepath, and PATHS are any additional source paths."
-  ())
+\"element\" or \"zero\" value), and FILE is our guaranteed source
+file."
+  (let ((path (t-filepath-path file)))
+    (with-temp-buffer
+      (cl-labels ((recurse (acc start)
+                    (goto-char (point-max))
+                    (insert-file-contents path nil start (+ start 100) nil)
+                    (let* ((line  (buffer-substring-no-properties (point-min) (point-max)))
+                           (nlpos (string-match-p "\n" line)))
+                      (cond
+                       ;; There was nothing left to read from the underlying file.
+                       ((string-empty-p line) acc)
+                       ;; A newline character was found in the current line, so we
+                       ;; extract only that section and leave the remainder in the
+                       ;; temporary buffer for the next iteration.
+                       (nlpos (let* ((beg  (point-min))
+                                     (line (buffer-substring-no-properties beg (1+ nlpos))))
+                                ; Also deletes the newline.
+                                (delete-region beg (+ 2 nlpos))
+                                (let ((acc (funcall f acc line)))
+                                  (if (t-reduced-p acc)
+                                      (t-reduced-val acc)
+                                      (recurse acc (+ start 100))))))
+                       (t (recurse acc (+ start 100)))))))
+        (recurse identity 0)))))
 
 (defun t--buffer-transduce (xform f coll &optional colls)
   "Transduce over buffers.
@@ -856,6 +878,8 @@ This works for any type of array, like vectors and strings."
 (defun t-file-read (path)
   "Source: Given a PATH, read its contents line by line."
   (make-t-filepath :path path))
+
+;; (t-transduce #'t-pass #'t-count (t-file-read "/home/colin/.gitconfig"))
 
 (provide 'transducers)
 ;;; transducers.el ends here
