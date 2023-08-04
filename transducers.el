@@ -784,6 +784,14 @@ Yields nil if no such element were found."
       (`(,acc) acc)
       (_ nil))))
 
+(defun t-for-each (&rest _vargs)
+  "Reducer: Run through every item in a transduction for their side effects.
+
+Throws away all results and yields nil."
+  nil)
+
+;; (t-transduce (t-map (lambda (n) (message "%d" n))) #'t-for-each [1 2 3 4])
+
 ;; --- Generators --- ;;
 
 (defun t-repeat (item)
@@ -830,7 +838,7 @@ Recall that both vectors and strings are considered Arrays."
   "Source: Yield the values of a given SEQ endlessly.")
 
 (cl-defmethod t-cycle ((seq list))
-  "Yield the values of a given list SEQ endlessly."
+  "Source: Yield the values of a given list SEQ endlessly."
   (if (null seq)
       (make-t-generator :func (lambda () t-done))
       (let* ((curr seq)
@@ -844,7 +852,7 @@ Recall that both vectors and strings are considered Arrays."
         (make-t-generator :func func))))
 
 (cl-defmethod t-cycle ((seq array))
-  "Yield the values of a given array SEQ endlessly.
+  "Source: Yield the values of a given array SEQ endlessly.
 
 This works for any type of array, like vectors and strings."
   (if (zerop (length seq))
@@ -864,10 +872,7 @@ This works for any type of array, like vectors and strings."
 
 ;; --- Other Sources --- ;;
 
-;; files by line
-;; buffer
 ;; csv
-;; json
 
 (defun t-buffer-read (buffer)
   "Source: Given a BUFFER or its name, read its contents line by line."
@@ -879,7 +884,9 @@ This works for any type of array, like vectors and strings."
   "Source: Given a PATH, read its contents line by line."
   (make-t-filepath :path path))
 
-;; (t-transduce #'t-pass #'t-count (t-file-read "/home/colin/.gitconfig"))
+;; (t-transduce (t-comp (t-filter (lambda (line) (string-prefix-p "[" line)))
+;;                      (t-map #'nreverse))
+;;              #'t-cons (t-file-read "/home/colin/.gitconfig"))
 
 (provide 'transducers)
 ;;; transducers.el ends here
