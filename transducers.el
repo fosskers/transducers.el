@@ -675,6 +675,30 @@ Borrowed from Clojure, thanks guys."
     (cl-mapc (lambda (k v) (puthash k v table)) keys vals)
     table))
 
+(defun t-once (item)
+  "Transducer: Inject some ITEM into the front of the transduction."
+  (lambda (reducer)
+    (let ((item item))
+      (lambda (result &rest inputs)
+        (if inputs (if item
+                       (let ((res (funcall reducer result item)))
+                         (if (t-reduced-p res)
+                             res
+                           (progn (setq item nil)
+                                  (apply reducer res inputs))))
+                     (apply reducer result inputs))
+          (funcall reducer result))))))
+
+;; (t-transduce (t-comp (t-filter (lambda (n) (> n 10)))
+;;                      (t-once 'hi)
+;;                      (t-take 3))
+;;              #'t-cons (t-ints 1))
+
+;; (t-transduce (t-comp (t-once "Name,Age")
+;;                      #'t-csv
+;;                      (t-map (lambda (hm) (gethash "Name" hm))))
+;;              #'t-cons ["Alice,35" "Bob,26"])
+
 ;; --- Reducers --- ;;
 
 (defun t-cons (&rest vargs)
