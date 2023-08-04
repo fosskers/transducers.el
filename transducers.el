@@ -116,16 +116,21 @@ transduction."
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, and a concrete filepath SOURCE, perform a
-full, strict transduction."
+full, strict transduction.
+
+Any additional SOURCES are ignored."
   (t--filepath-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source t-buffer) &rest sources)
-  "Transduce over buffers.
+(cl-defmethod t-transduce (xform f (source t-buffer) &rest _sources)
+  "Transduce over a buffer.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete buffer SOURCE, and any number of
-additional buffer SOURCES, perform a full, strict transduction."
-  (t--buffer-transduce xform f source sources))
+reducer function F, and a concrete buffer SOURCE, perform a full,
+strict transduction.
+
+The buffer can be a buffer object or just a buffer name. Any
+additional SOURCES are ignored."
+  (t--buffer-transduce xform f source))
 
 (defun t--list-transduce (xform f coll &optional colls)
   "Transduce over lists.
@@ -255,19 +260,19 @@ file."
                        (t (recurse acc (+ start 100)))))))
         (recurse identity 0)))))
 
-(defun t--buffer-transduce (xform f coll &optional colls)
-  "Transduce over buffers.
+(defun t--buffer-transduce (xform f buffer)
+  "Transduce over a buffer.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete buffer COLL, and any number of
-additional buffers COLLS, perform a full, strict transduction."
+reducer function F, and a concrete BUFFER, perform a full, strict
+transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (t--buffer-reduce xf init coll colls)))
+         (result (t--buffer-reduce xf init buffer)))
     (funcall xf result)))
 
-(defun t--buffer-reduce (f identity buffer &rest _buffers)
-  "Reduce over buffers.
+(defun t--buffer-reduce (f identity buffer)
+  "Reduce over a buffer.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
@@ -628,6 +633,47 @@ first application, the given SEED value is used as the initial
 
 ;; (t-transduce (t-scan #'+ 0) #'t-cons '(1 2 3 4))
 ;; (t-transduce (t-comp (t-scan #'+ 0) (t-take 2)) #'t-cons '(1 2 3 4))
+
+(defun t-csv (reducer)
+  "Transducer: Interpret the data stream as CSV data.
+
+The first item found is assumed to be the header list, and it
+will be used to construct useable hashmaps for all subsequent
+items.
+
+Note: This function makes no attempt to convert types from the
+original parsed strings. If you want numbers, you will need to
+further parse them yourself with something like
+`read-from-string'.
+
+This function is expected to be passed \"bare\" to `t-transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (let ((headers nil))
+    (lambda (result &rest inputs)
+      (if inputs (let ((items (t--split-csv-line (car inputs))))
+                   (if headers (funcall reducer result (t--zipmap headers items))
+                     (progn (setq headers items)
+                            result)))
+        (funcall reducer result)))))
+
+;; (t-transduce (t-comp #'t-csv
+;;                      (t-map (lambda (hm) (gethash "Name" hm))))
+;;              #'t-cons (t-buffer-read "foo.csv"))
+
+(defun t--split-csv-line (line)
+  "Split a LINE of CSV data in a sane way.
+
+This removes any extra whitespace that might be hanging around
+between elements."
+  (string-split line "," nil "[ ]+"))
+
+(defun t--zipmap (keys vals)
+  "Form a hashmap with the KEYS mapped to the corresponding VALS.
+
+Borrowed from Clojure, thanks guys."
+  (let ((table (make-hash-table :test #'equal)))
+    (cl-mapc (lambda (k v) (puthash k v table)) keys vals)
+    table))
 
 ;; --- Reducers --- ;;
 
