@@ -665,7 +665,7 @@ so there is no need for the caller to manually pass a REDUCER."
 
 This removes any extra whitespace that might be hanging around
 between elements."
-  (string-split line "," nil "[ ]+"))
+  (split-string line "," nil "[ ]+"))
 
 (defun t--zipmap (keys vals)
   "Form a hashmap with the KEYS mapped to the corresponding VALS.
@@ -866,7 +866,7 @@ Throws away all results and yields nil."
 
 (defun t-repeat (item)
   "Source: Endlessly yield a given ITEM."
-  (make-t-generator :func (cl-constantly item)))
+  (make-t-generator :func (lambda (&rest _) item)))
 
 ;; (t-transduce (t-take 4) #'t-cons (t-repeat 9))
 
