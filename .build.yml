@@ -1,7 +1,6 @@
 image: archlinux
 packages:
 - emacs-nox
-- tree-sitter
 sources:
 - https://git.sr.ht/~fosskers/transducers.el
 tasks:
