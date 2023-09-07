@@ -6,7 +6,7 @@
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
 ;; Modified: July 26, 2023
-;; Version: 0.0.1
+;; Version: 1.0.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
 ;; Package-Requires: ((emacs "25.1"))
@@ -15,7 +15,7 @@
 ;;
 ;;; Commentary:
 ;;
-;;  Ergonomic, efficient data processing
+;;  Ergonomic, efficient data processing.
 ;;
 ;;; Code:
 
@@ -79,136 +79,128 @@ value and try to continue the transducing process."
           (make-t-reduced :val result)
         result))))
 
-(cl-defgeneric t-transduce (xform f source &rest sources)
+(cl-defgeneric t-transduce (xform f source)
   "The entry-point for processing some data source via transductions.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, a concrete data SOURCE, and any number
 of additional SOURCES, perform a full, strict transduction.")
 
-(cl-defmethod t-transduce (xform f (source list) &rest sources)
+(cl-defmethod t-transduce (xform f (source list))
   "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete list SOURCE, and any number of
-additional lists SOURCES, perform a full, strict transduction."
-  (t--list-transduce xform f source sources))
+reducer function F, and a concrete list SOURCE, perform a full,
+strict transduction."
+  (t--list-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source array) &rest sources)
+(cl-defmethod t-transduce (xform f (source array))
   "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete array SOURCE, and any number of
-additional array SOURCES, perform a full, strict transduction."
-  (t--array-transduce xform f source sources))
+reducer function F, and a concrete array SOURCE, perform a full,
+strict transduction."
+  (t--array-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source t-generator) &rest sources)
+(cl-defmethod t-transduce (xform f (source t-generator))
   "Transduce over generators.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete generator SOURCE, and any number
-of additional generator SOURCES, perform a full, strict
-transduction."
-  (t--generator-transduce xform f source sources))
+reducer function F, and a concrete generator SOURCE, perform a
+full, strict transduction."
+  (t--generator-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source t-filepath) &rest _sources)
+(cl-defmethod t-transduce (xform f (source t-filepath))
   "Transduce over the lines of a file.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, and a concrete filepath SOURCE, perform a
-full, strict transduction.
-
-Any additional SOURCES are ignored."
+full, strict transduction."
   (t--filepath-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source t-buffer) &rest _sources)
+(cl-defmethod t-transduce (xform f (source t-buffer))
   "Transduce over a buffer.
 
 Given a composition of transducer functions (the XFORM), a
 reducer function F, and a concrete buffer SOURCE, perform a full,
 strict transduction.
 
-The buffer can be a buffer object or just a buffer name. Any
-additional SOURCES are ignored."
+The buffer can be a buffer object or just a buffer name."
   (t--buffer-transduce xform f source))
 
-(defun t--list-transduce (xform f coll &optional colls)
+(defun t--list-transduce (xform f coll)
   "Transduce over lists.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete list COLL, and any number of
-additional lists COLLS, perform a full, strict transduction."
+reducer function F, and a concrete list COLL, perform a full,
+strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (t--list-reduce xf init coll colls)))
+         (result (t--list-reduce xf init coll)))
     (funcall xf result)))
 
-(defun t--list-reduce (f identity coll &optional colls)
+(defun t--list-reduce (f identity coll)
   "Reduce over lists.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), COLL is our guaranteed source
-list, and COLLS are any additional source lists."
-  (cl-labels ((recurse (acc items extras)
-                (if (or (not items)
-                        (cl-some #'not extras))
+\"element\" or \"zero\" value), and COLL is our guaranteed source
+list."
+  (cl-labels ((recurse (acc items)
+                (if (null items)
                     acc
-                  (let ((v (apply f acc (car items) (mapcar #'car extras))))
+                  (let ((v (funcall f acc (car items))))
                     (if (t-reduced-p v)
                         (t-reduced-val v)
-                      (recurse v (cdr items) (mapcar #'cdr extras)))))))
-    (recurse identity coll colls)))
+                      (recurse v (cdr items)))))))
+    (recurse identity coll)))
 
-(defun t--array-transduce (xform f coll &optional colls)
+(defun t--array-transduce (xform f coll)
   "Transduce over arrays.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete array COLL, and any number of
-additional array COLLS, perform a full, strict transduction."
+reducer function F, and a concrete array COLL, perform a full,
+strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (t--array-reduce xf init coll colls)))
+         (result (t--array-reduce xf init coll)))
     (funcall xf result)))
 
-(defun t--array-reduce (f identity arr &optional arrs)
+(defun t--array-reduce (f identity arr)
   "Reduce over arrays.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), ARR is our guaranteed source
-array, and ARRS are any additional source arrays."
-  (let ((shortest (apply #'min (length arr) (mapcar #'length arrs))))
+\"element\" or \"zero\" value), and ARR is our guaranteed source
+array."
+  (let ((len (length arr)))
     (cl-labels ((recurse (acc i)
-                  (if (= i shortest)
+                  (if (= i len)
                       acc
-                    (let ((acc (apply f acc (aref arr i) (mapcar (lambda (a) (aref a i)) arrs))))
+                    (let ((acc (funcall f acc (aref arr i))))
                       (if (t-reduced-p acc)
                           (t-reduced-val acc)
                         (recurse acc (1+ i)))))))
       (recurse identity 0))))
 
-(defun t--generator-transduce (xform f coll &optional colls)
+(defun t--generator-transduce (xform f coll)
   "Transduce over generators.
 
 Given a composition of transducer functions (the XFORM), a
-reducer function F, a concrete generator COLL, and any number of
-additional generator COLLS, perform a full, strict transduction."
+reducer function F, and a concrete generator COLL, perform a
+full, strict transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
-         (result (t--generator-reduce xf init coll colls)))
+         (result (t--generator-reduce xf init coll)))
     (funcall xf result)))
 
-;; FIXME Wed Aug  2 20:29:58 2023
-;;
-;; Handle multiple generators.
-(defun t--generator-reduce (f identity gen &rest _gens)
+(defun t--generator-reduce (f identity gen)
   "Reduce over a generator.
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), GEN is our guaranteed source
-array, and GENS are any additional source arrays."
+\"element\" or \"zero\" value), and GEN is our guaranteed source
+array."
   (cl-labels ((recurse (acc)
                 (let ((val (funcall (t-generator-func gen))))
                   (if (eq t-done val) acc
