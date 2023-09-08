@@ -243,12 +243,11 @@ file."
                        ;; temporary buffer for the next iteration.
                        (nlpos (let* ((beg  (point-min))
                                      (line (buffer-substring-no-properties beg (1+ nlpos))))
-                                ; Also deletes the newline.
-                                (delete-region beg (+ 2 nlpos))
+                                (delete-region beg (+ 2 nlpos))  ; Also deletes the newline.
                                 (let ((acc (funcall f acc line)))
                                   (if (t-reduced-p acc)
                                       (t-reduced-val acc)
-                                      (recurse acc (+ start 100))))))
+                                    (recurse acc (+ start 100))))))
                        (t (recurse acc (+ start 100)))))))
         (recurse identity 0)))))
 
@@ -407,13 +406,9 @@ so there is no need for the caller to manually pass a REDUCER."
 This function is expected to be passed \"bare\" to `t-transduce',
 so there is no need for the caller to manually pass a REDUCER."
   (lambda (result &rest inputs)
-    ;; FIXME Tue Aug  1 21:07:16 2023
-    ;;
-    ;; Only considers the first input element.
+    ;; FIXME 2023-08-01 Only considers the first input element.
     (if inputs (let ((input (car inputs)))
-                 ;; FIXME Tue Aug  1 21:09:53 2023
-                 ;;
-                 ;; Why is this only considering lists?
+                 ;; FIXME 2023-08-01 Why is this only considering lists?
                  (if (listp input)
                      (t--list-reduce (t--preserving-reduced (t-flatten reducer)) result input)
                    (funcall reducer result input)))
@@ -433,9 +428,7 @@ shorter than N."
           (collect '()))
       (lambda (result &rest inputs)
         (cond (inputs
-               ;; FIXME Wed Aug  2 11:44:27 2023
-               ;;
-               ;; Only the first input is considered.
+               ;; FIXME 2023-08-02 Only the first input is considered.
                (setf collect (cons (car inputs) collect))
                (setf i (1+ i))
                (if (< i n)
@@ -626,7 +619,7 @@ first application, the given SEED value is used as the initial
 ;; (t-transduce (t-scan #'+ 0) #'t-cons '(1 2 3 4))
 ;; (t-transduce (t-comp (t-scan #'+ 0) (t-take 2)) #'t-cons '(1 2 3 4))
 
-(defun t-csv (reducer)
+(defun t-from-csv (reducer)
   "Transducer: Interpret the data stream as CSV data.
 
 The first item found is assumed to be the header list, and it
@@ -666,6 +659,40 @@ Borrowed from Clojure, thanks guys."
   (let ((table (make-hash-table :test #'equal)))
     (cl-mapc (lambda (k v) (puthash k v table)) keys vals)
     table))
+
+(defun t-into-csv (headers)
+  "Transducer: Given a list of HEADERS, rerender each stream item as CSV.
+It's assumed that each item in the transduction is a hash table
+whose keys are strings that match the values found in HEADERS."
+  (if (null headers)
+      (error "Empty headers list")
+    (lambda (reducer)
+      (let ((unsent t))
+        (lambda (result &rest inputs)
+          (if inputs (let ((input (car inputs)))  ;; FIXME Only handles first input.
+                       (if unsent
+                           (let ((res (funcall reducer result (t--recsv headers))))
+                             (if (t-reduced-p res)
+                                 res
+                               (progn (setq unsent nil)
+                                      (funcall reducer res (t--table-vals->csv headers input)))))
+                         (funcall reducer result (t--table-vals->csv headers input))))
+            (funcall reducer result)))))))
+
+;; (t-transduce (t-comp #'t-from-csv (t-into-csv '("Name" "Age")))
+;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))
+;; (t-transduce (t-comp #'t-from-csv (t-into-csv '()))
+;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))
+
+(defun t--table-vals->csv (headers table)
+  "Given some HEADERS to compare to, convert a hash TABLE to a
+ rendered CSV string of its values."
+  (t--recsv (t-transduce (t-filter-map (lambda (k) (gethash k table)))
+                         #'t-cons headers)))
+
+(defun t--recsv (items)
+  "Reconvert some ITEMS into a comma-separated string."
+  (mapconcat (lambda (o) (if (stringp o) o (prin1-to-string o))) items ","))
 
 (defun t-once (item)
   "Transducer: Inject some ITEM into the front of the transduction."
@@ -903,15 +930,15 @@ Recall that both vectors and strings are considered Arrays."
   "Source: Yield the values of a given list SEQ endlessly."
   (if (null seq)
       (make-t-generator :func (lambda () t-done))
-      (let* ((curr seq)
-             (func (lambda ()
-                     (cond ((null curr)
-                            (setf curr (cdr seq))
-                            (car seq))
-                           (t (let ((next (car curr)))
-                                (setf curr (cdr curr))
-                                next))))))
-        (make-t-generator :func func))))
+    (let* ((curr seq)
+           (func (lambda ()
+                   (cond ((null curr)
+                          (setf curr (cdr seq))
+                          (car seq))
+                         (t (let ((next (car curr)))
+                              (setf curr (cdr curr))
+                              next))))))
+      (make-t-generator :func func))))
 
 (cl-defmethod t-cycle ((seq array))
   "Source: Yield the values of a given array SEQ endlessly.
@@ -919,16 +946,16 @@ Recall that both vectors and strings are considered Arrays."
 This works for any type of array, like vectors and strings."
   (if (zerop (length seq))
       (make-t-generator :func (lambda () t-done))
-      (let* ((ix 0)
-             (len (length seq))
-             (func (lambda ()
-                     (cond ((>= ix len)
-                            (setf ix 1)
-                            (aref seq 0))
-                           (t (let ((next (aref seq ix)))
-                                (setf ix (1+ ix))
-                                next))))))
-        (make-t-generator :func func))))
+    (let* ((ix 0)
+           (len (length seq))
+           (func (lambda ()
+                   (cond ((>= ix len)
+                          (setf ix 1)
+                          (aref seq 0))
+                         (t (let ((next (aref seq ix)))
+                              (setf ix (1+ ix))
+                              next))))))
+      (make-t-generator :func func))))
 
 ;; (t-transduce (t-take 10) #'t-cons (t-cycle '(1 2 3)))
 

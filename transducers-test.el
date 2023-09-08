@@ -107,3 +107,8 @@
   (should (equal '(1 2 3 1 2 3 1) (t-transduce (t-take 7) #'t-cons (t-cycle [1 2 3]))))
   (should (equal "hellohe" (t-transduce (t-take 7) #'t-string (t-cycle "hello"))))
   (should (equal '() (t-transduce (t-take 7) #'t-cons (t-cycle '())))))
+
+(ert-deftest transducers-csv ()
+  (should (equal '("Name,Age" "Colin,35" "Tamayo,26")
+                 (t-transduce (t-comp #'t-from-csv (t-into-csv '("Name" "Age")))
+                              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black")))))
