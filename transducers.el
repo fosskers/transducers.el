@@ -422,7 +422,7 @@ so there is no need for the caller to manually pass a REDUCER."
  If the input stops, flush any accumulated state, which may be
 shorter than N."
   (unless (> n 0)
-    (error "The arguments to segment must be a positive integer"))
+    (error "t-segment: The arguments to segment must be a positive integer"))
   (lambda (reducer)
     (let ((i 0)
           (collect '()))
@@ -529,7 +529,7 @@ This is different from `t-segment' which yields non-overlapping
 windows. If there were fewer items in the input than N, then this
 yields nothing."
   (unless (> n 0)
-    (error "The arguments to window must be a positive integer"))
+    (error "t-window: The arguments to window must be a positive integer"))
   (lambda (reducer)
     (let ((i 0)
           (q (make-ring n)))
@@ -582,7 +582,7 @@ so there is no need for the caller to manually pass a REDUCER."
 
 The first element of the transduction is always included."
   (when (< n 1)
-    (error "The argument to skip must be greater than 0"))
+    (error "t-step: The argument to skip must be greater than 0"))
   (lambda (reducer)
     (let ((curr 1))
       (lambda (result &rest inputs)
@@ -665,7 +665,7 @@ Borrowed from Clojure, thanks guys."
 It's assumed that each item in the transduction is a hash table
 whose keys are strings that match the values found in HEADERS."
   (if (null headers)
-      (error "Empty headers list")
+      (error "t-into-csv: Empty headers list")
     (lambda (reducer)
       (let ((unsent t))
         (lambda (result &rest inputs)
@@ -770,7 +770,7 @@ two arguments."
   (pcase vargs
     (`((,count . ,total) ,input) (cons (1+ count) (+ total input)))
     (`((,count . ,total)) (if (= 0 count)
-                              (error "Empty transduction")
+                              (error "t-average: Empty transduction")
                             (/ total (float count))))
     (_ (cons 0 0))))
 
@@ -816,7 +816,7 @@ two arguments."
   (pcase vargs
     (`(,_ ,input) (make-t-reduced :val input))
     (`(,acc) (if (eq 't--none acc)
-                 (error "Empty transduction")
+                 (error "t-first: Empty transduction")
                acc))
     (_ 't--none)))
 
@@ -828,42 +828,43 @@ two arguments."
   (pcase vargs
     (`(,_ ,input) input)
     (`(,acc) (if (eq 't--none acc)
-                 (error "Empty transduction")
+                 (error "t-last: Empty transduction")
                acc))
     (_ 't--none)))
 
 ;; (t-transduce #'t-pass (t-last 'none) '(2 4 6 7 10))
 
-(defun t-fold (f seed)
+(cl-defun t-fold (f &optional (seed nil seed-p))
   "Reducer: The fundamental reducer.
 
 `t-fold' creates an ad-hoc reducer based on a given 2-argument
-function F. A SEED is also required as the initial accumulator
-value, which also becomes the return value in case there were no
-input left in the transduction.
+function. An optional SEED value can also be given as the initial
+accumulator value, which also becomes the return value in case
+there were no input left in the transduction.
 
-Functions like `+' and `*' are automatically valid reducers,
-because they yield sane values even when given 0 or 1 arguments.
-Other functions like `max' cannot be used as-is as reducers since
-they require at least 2 arguments. For functions like this,
-`t-fold' is appropriate."
-  (lambda (&rest vargs)
-    (pcase vargs
-      (`(,acc ,input) (funcall f acc input))
-      (`(, acc) acc)
-      (_ seed))))
+Functions like `+' and `*' are automatically valid reducers, because they yield
+sane values even when given 0 or 1 arguments. Other functions like `max' cannot
+be used as-is as reducers since they can't be called without arguments. For
+functions like this, `t-fold' is appropriate."
+  (if seed-p
+      (lambda (&rest vargs)
+        (pcase vargs
+          (`(,acc ,input) (funcall f acc input))
+          (`(, acc) acc)
+          (_ seed)))
+    (lambda (&rest vargs)
+      (pcase vargs
+        (`(,acc ,input) (if (eq acc 't--none)
+                            input
+                          (funcall f acc input)))
+        (`(,acc) (if (eq acc 't--none)
+                     (error "t-fold: Empty transduction")
+                   acc))
+        (_ 't--none)))))
 
-(defun t-max (default)
-  "Reducer: Yield the maximum value of the transduction.
-
-If there wasn't one, yields the DEFAULT."
-  (t-fold #'max default))
-
-(defun t-min (default)
-  "Reducer: Yield the minimum value of the transduction.
-
-If there wasn't one, yields the DEFAULT."
-  (t-fold #'min default))
+;; (t-transduce #'t-pass (t-fold #'max) '())
+;; (t-transduce #'t-pass (t-fold #'max 0) '(1 2 3 4 1000 5 6))
+;; (t-transduce #'t-pass (t-fold #'max) '(1 2 3 4 1000 5 6))
 
 (defun t-find (pred)
   "Reducer: Find the first element in the transduction that satisfies a given PRED.
