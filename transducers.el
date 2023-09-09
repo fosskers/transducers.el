@@ -762,18 +762,20 @@ two arguments."
     (`(,acc) acc)
     (`() 0)))
 
-(defun t-average (fallback)
+(defun t-average (&rest vargs)
   "Reducer: Calculate the average value of all numeric elements in a transduction.
 
-A FALLBACK must be provided in case no elements made it through
-the transduction (thus protecting from division-by-zero)."
-  (let ((items 0))
-    (lambda (&rest vargs)
-      (pcase vargs
-        (`(,acc ,input) (+ acc input))
-        (`(,acc) (if (= 0 items) fallback
-                   (/ acc items)))
-        (`() 0)))))
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`((,count . ,total) ,input) (cons (1+ count) (+ total input)))
+    (`((,count . ,total)) (if (= 0 count)
+                              (error "Empty transduction")
+                            (/ total (float count))))
+    (_ (cons 0 0))))
+
+;; (t-transduce #'t-pass #'t-average '(1 2 3 4 5 6))
+;; (t-transduce (t-filter #'cl-evenp) #'t-average '(1 3 5))
 
 (defun t-anyp (pred)
   "Reducer: Yield non-nil if any element in the transduction satisfies PRED.
