@@ -21,8 +21,10 @@
   (should (not (t-transduce #'t-pass (t-allp #'cl-oddp) '(1 3 5 7 9 2)))))
 
 (ert-deftest transducers-first-last ()
-  (should (= 7  (t-transduce (t-filter #'cl-oddp) (t-first 0) '(2 4 6 7 10))))
-  (should (= 10 (t-transduce #'t-pass (t-last 0) '(2 4 6 7 10)))))
+  (should (= 7  (t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 7 10))))
+  (should-error (t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 10)))
+  (should (= 10 (t-transduce #'t-pass #'t-last '(2 4 6 7 10))))
+  (should-error (t-transduce #'t-pass #'t-last '())))
 
 (ert-deftest transducers-folding-finding ()
   (should (= 1000 (t-transduce #'t-pass (t-fold #'max 0) '(1 2 3 4 1000 5 6))))

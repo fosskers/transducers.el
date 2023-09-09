@@ -808,27 +808,29 @@ Short-circuits with nil if any element fails the test."
 
 ;; (t-transduce #'t-pass (t-allp #'cl-oddp) '(1 3 5 7 9))
 
-(defun t-first (default)
+(defun t-first (&rest vargs)
   "Reducer: Yield the first value of the transduction.
 
-If there wasn't one, yields the DEFAULT."
-  (lambda (&rest vargs)
-    (pcase vargs
-      (`(,_ ,input) (make-t-reduced :val input))
-      (`(,acc) acc)
-      (_ default))))
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,_ ,input) (make-t-reduced :val input))
+    (`(,acc) (if (eq 't--none acc)
+                 (error "Empty transduction")
+               acc))
+    (_ 't--none)))
 
-;; (t-transduce (t-filter #'cl-oddp) (t-first 0) '(2 4 6 7 10))
+;; (t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 7 10))
+;; (t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 10))
 
-(defun t-last (default)
-  "Reducer: Yield the last value of the transduction.
-
-If there wasn't one, yields the DEFAULT."
-  (lambda (&rest vargs)
-    (pcase vargs
-      (`(,_ ,input) input)
-      (`(,acc) acc)
-      (_ default))))
+(defun t-last (&rest vargs)
+  "Reducer: Yield the last value of the transduction."
+  (pcase vargs
+    (`(,_ ,input) input)
+    (`(,acc) (if (eq 't--none acc)
+                 (error "Empty transduction")
+               acc))
+    (_ 't--none)))
 
 ;; (t-transduce #'t-pass (t-last 'none) '(2 4 6 7 10))
 
