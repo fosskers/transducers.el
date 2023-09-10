@@ -65,7 +65,13 @@
   (should (equal '(1 2 3 4 5 6 7 8 9)
                  (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) (7 8 9)))))
   (should (equal '(1 2 3 0 4 5 6 0 7 8 9 0)
-                 (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0)))))
+                 (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))))
+  (should (equal '(:a 1 :b 2 :c 3)
+                 (t-transduce #'t-uncons #'t-cons (t-plist '(:a 1 :b 2 :c 3)))))
+  (should (equal '(:a 2 :b 3 :c 4)
+                 (t-transduce (t-comp (t-map (lambda (pair) (cons (car pair) (1+ (cdr pair)))))
+                                      #'t-uncons)
+                              #'t-cons (t-plist '(:a 1 :b 2 :c 3))))))
 
 (ert-deftest transducers-pairing ()
   (should (equal '((1 2 3) (4 5))
@@ -105,14 +111,16 @@
                               #'t-cons
                               '(1 2 3 4 5 6 7 8 9 10)))))
 
-(ert-deftest transducers-generators ()
+(ert-deftest transducers-sources ()
   (should (equal '() (t-transduce (t-take 0) #'t-cons (t-ints 0))))
   (should (equal '(0 1 2 3) (t-transduce (t-take 4) #'t-cons (t-ints 0))))
   (should (equal '(0 -1 -2 -3) (t-transduce (t-take 4) #'t-cons (t-ints 0 :step -1))))
   (should (equal '(1 2 3 1 2 3 1) (t-transduce (t-take 7) #'t-cons (t-cycle '(1 2 3)))))
   (should (equal '(1 2 3 1 2 3 1) (t-transduce (t-take 7) #'t-cons (t-cycle [1 2 3]))))
   (should (equal "hellohe" (t-transduce (t-take 7) #'t-string (t-cycle "hello"))))
-  (should (equal '() (t-transduce (t-take 7) #'t-cons (t-cycle '())))))
+  (should (equal '() (t-transduce (t-take 7) #'t-cons (t-cycle '()))))
+  (should (equal (list (cons :a 1) (cons :b 2) (cons :c 3))
+                 (t-transduce #'t-pass #'t-cons (t-plist '(:a 1 :b 2 :c 3))))))
 
 (ert-deftest transducers-csv ()
   (should (equal '("Name,Age" "Colin,35" "Tamayo,26")

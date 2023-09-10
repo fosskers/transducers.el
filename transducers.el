@@ -22,6 +22,8 @@
 (require 'cl-lib)
 (require 'ring)
 
+;; --- Utilities --- ;;
+
 (defconst t-done 't--done
   "The signal that a generator source has finished generating values.")
 
@@ -40,6 +42,9 @@
 (cl-defstruct (t-buffer (:copier nil))
   "A wrapper around a buffer name."
   name)
+
+(cl-defstruct (t-plist (:copier nil) (:predicate nil))
+  (list nil :read-only t :type list))
 
 (defun t-ensure-function (arg)
   "Is some ARG a function?"
@@ -78,6 +83,8 @@ value and try to continue the transducing process."
       (if (t-reduced-p result)
           (make-t-reduced :val result)
         result))))
+
+;; --- Entry Functions --- ;;
 
 (cl-defgeneric t-transduce (xform f source)
   "The entry-point for processing some data source via transductions.
@@ -127,6 +134,16 @@ strict transduction.
 
 The buffer can be a buffer object or just a buffer name."
   (t--buffer-transduce xform f source))
+
+(cl-defmethod t-transduce (xform f (source t-plist))
+  "Transduce over a Property List (plist).
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete plist SOURCE, perform a full,
+strict transduction.
+
+Yields key-value pairs as cons cells."
+  (t--plist-transduce xform f source))
 
 (defun t--list-transduce (xform f coll)
   "Transduce over lists.
@@ -285,6 +302,26 @@ buffer, and BUFFERS are any additional source buffers."
                                  (recurse acc)))))))
         (recurse identity)))))
 
+(defun t--plist-transduce (xform f coll)
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (t--plist-reduce xf init coll)))
+    (funcall xf result)))
+
+(defun t--plist-reduce (f identity lst)
+  (cl-labels ((recurse (acc items)
+                (cond ((null items) acc)
+                      ((null (cdr items)) (error "Imbalanced plist. Last key: %s" (car items)))
+                      (t (let ((v (funcall f acc (cons (car items) (cl-second items)))))
+                           (if (t-reduced-p v)
+                               (t-reduced-val v)
+                             (recurse v (cdr (cdr items)))))))))
+    (recurse identity (t-plist-list lst))))
+
+;; (t-transduce #'t-pass #'t-cons (t-plist `(:a 1 :b 2 :c 3)))
+;; (t-transduce (t-map #'car) #'t-cons (t-plist `(:a 1 :b 2 :c 3)))
+;; (t-transduce (t-map #'cdr) #'+ (t-plist `(:a 1 :b 2 :c)))  ;; Imbalanced plist for testing.
+
 ;; --- Transducers --- ;;
 
 (defun t-pass (reducer)
@@ -387,6 +424,24 @@ Stops the transduction as soon as any element fails the test."
         (funcall reducer result)))))
 
 ;; (t-transduce (t-take-while #'cl-evenp) #'t-cons '(2 4 6 8 9 2))
+
+(defun t-uncons (reducer)
+  "Transducer: Split up a transduction of cons cells.
+
+This function is expected to be passed \"bare\" to `t-transduce',
+so there is no need for the caller to manually pass a REDUCER."
+  (lambda (result &rest inputs)
+    (if inputs (let* ((input (car inputs))
+                      (res (funcall reducer result (car input))))
+                 (if (t-reduced-p res)
+                     res
+                   (funcall reducer res (cdr input))))
+      (funcall reducer result))))
+
+;; (t-transduce #'t-uncons #'t-cons (t-plist '(:a 1 :b 2 :c 3)))
+;; (t-transduce (t-comp (t-map (lambda (pair) (cons (car pair) (1+ (cdr pair)))))
+;;                      #'t-uncons)
+;;              #'t-cons (t-plist '(:a 1 :b 2 :c 3)))
 
 (defun t-concatenate (reducer)
   "Transducer: Concatenate all the sublists in the transduction.
@@ -838,9 +893,9 @@ two arguments."
   "Reducer: The fundamental reducer.
 
 `t-fold' creates an ad-hoc reducer based on a given 2-argument
-function. An optional SEED value can also be given as the initial
-accumulator value, which also becomes the return value in case
-there were no input left in the transduction.
+function F. An optional SEED value can also be given as the
+initial accumulator value, which also becomes the return value in
+case there were no input left in the transduction.
 
 Functions like `+' and `*' are automatically valid reducers, because they yield
 sane values even when given 0 or 1 arguments. Other functions like `max' cannot
@@ -966,8 +1021,6 @@ This works for any type of array, like vectors and strings."
 
 ;; --- Other Sources --- ;;
 
-;; csv
-
 (defun t-buffer-read (buffer)
   "Source: Given a BUFFER or its name, read its contents line by line."
   (make-t-buffer :name buffer))
@@ -981,6 +1034,12 @@ This works for any type of array, like vectors and strings."
 ;; (t-transduce (t-comp (t-filter (lambda (line) (string-prefix-p "[" line)))
 ;;                      (t-map #'nreverse))
 ;;              #'t-cons (t-file-read "/home/colin/.gitconfig"))
+
+(defun t-plist (plist)
+  "Source: Yield key-value pairs from a PLIST."
+  (make-t-plist :list plist))
+
+;; (t-plist '(:a 1 :b 2 :c 3))
 
 (provide 'transducers)
 ;;; transducers.el ends here
