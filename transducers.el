@@ -135,6 +135,16 @@ strict transduction.
 The buffer can be a buffer object or just a buffer name."
   (t--buffer-transduce xform f source))
 
+(cl-defmethod t-transduce (xform f (source hash-table))
+  "Transduce over a Hash Table.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete plist SOURCE, perform a full,
+strict transduction.
+
+Yields key-value pairs as cons cells."
+  (t--hash-table-transduce xform f source))
+
 (cl-defmethod t-transduce (xform f (source t-plist))
   "Transduce over a Property List (plist).
 
@@ -284,8 +294,8 @@ transduction."
 
 F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
-\"element\" or \"zero\" value), BUFFER is our guaranteed source
-buffer, and BUFFERS are any additional source buffers."
+\"element\" or \"zero\" value), and BUFFER is our guaranteed
+source buffer."
   (with-current-buffer (t-buffer-name buffer)
     (let ((eof (point-max)))
       (goto-char (point-min))
@@ -303,12 +313,23 @@ buffer, and BUFFERS are any additional source buffers."
         (recurse identity)))))
 
 (defun t--plist-transduce (xform f coll)
+  "Transduce over a Property List.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete COLL, perform a full, strict
+transduction."
   (let* ((init   (funcall f))
          (xf     (funcall xform f))
          (result (t--plist-reduce xf init coll)))
     (funcall xf result)))
 
 (defun t--plist-reduce (f identity lst)
+  "Reduce over a Property List.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), and LST is our guaranteed source
+plist."
   (cl-labels ((recurse (acc items)
                 (cond ((null items) acc)
                       ((null (cdr items)) (error "Imbalanced plist. Last key: %s" (car items)))
@@ -321,6 +342,34 @@ buffer, and BUFFERS are any additional source buffers."
 ;; (t-transduce #'t-pass #'t-cons (t-plist `(:a 1 :b 2 :c 3)))
 ;; (t-transduce (t-map #'car) #'t-cons (t-plist `(:a 1 :b 2 :c 3)))
 ;; (t-transduce (t-map #'cdr) #'+ (t-plist `(:a 1 :b 2 :c)))  ;; Imbalanced plist for testing.
+
+(defun t--hash-table-transduce (xform f coll)
+  "Transduce over a Hash Table.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete COLL, perform a full, strict
+transduction."
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (t--hash-table-reduce xf init coll)))
+    (funcall xf result)))
+
+(defun t--hash-table-reduce (f identity ht)
+  "Reduce over a Hash Table.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), and HT is our guaranteed source
+Hash Table."
+  (catch 'stop
+    (let ((acc identity))
+      (maphash (lambda (key value)
+                 (let ((res (funcall f acc (cons key value))))
+                   (if (t-reduced-p res)
+                       (throw 'stop (t-reduced-val res))
+                     (setq acc res))))
+               ht)
+      acc)))
 
 ;; --- Transducers --- ;;
 
@@ -806,6 +855,17 @@ two arguments."
     (`(,acc ,input) (cons input acc))
     (`(,acc) (cl-concatenate 'vector (reverse acc)))
     (`() '())))
+
+(defun t-hash-table (&rest vargs)
+  "Reducer: Collect a stream of key-value cons pairs into a hash table.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc (,key . ,value)) (progn (puthash key value acc)
+                                    acc))
+    (`(,acc) acc)
+    (`() (make-hash-table :test #'equal))))
 
 (defun t-count (&rest vargs)
   "Reducer: Count the number of elements that made it through the transduction.
