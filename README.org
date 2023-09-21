@@ -180,7 +180,7 @@ buffer, or raw string.
 the fields provided in the first line. =t-into-csv= reverses the process, given a
 sequence of headers to select.
 
-#+begin_src emacs-lisp :exports both
+#+begin_src emacs-lisp :exports both :results verbatim
 (t-transduce (t-comp #'t-from-csv
                      (t-into-csv ["Age" "Name"]))
              #'t-cons
@@ -188,7 +188,7 @@ sequence of headers to select.
 #+end_src
 
 #+RESULTS:
-| Age,Name | 35,Alice | 26,Bob |
+: ("Age,Name" "35,Alice" "26,Bob")
 
 Here we're immediately converting back into CSV strings, but with =t-comp= we're
 free to add as many intermediate steps as we like.
@@ -199,7 +199,7 @@ There is no special reducer function for plists, because none is needed. If you
 have a stream of cons cells, you can break it up with ~t-uncons~ and then collect
 with ~t-cons~ as usual:
 
-#+begin_src emacs-lisp :exports both
+#+begin_src emacs-lisp :exports both :results verbatim
 (t-transduce (t-comp (t-map (lambda (pair) (cons (car pair) (1+ (cdr pair)))))
                      #'t-uncons)
              #'t-cons
@@ -207,7 +207,7 @@ with ~t-cons~ as usual:
 #+end_src
 
 #+RESULTS:
-| :a | 2 | :b | 3 | :c | 4 |
+: (:a 2 :b 3 :c 4)
 
 Likewise, Association Lists are already lists-of-cons-cells, so no special
 treatment is needed:

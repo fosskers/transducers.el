@@ -15,7 +15,19 @@
 ;;
 ;;; Commentary:
 ;;
-;;  Ergonomic, efficient data processing.
+;;  Transducers are an ergonomic and extremely memory-efficient way to process a
+;;  data source. Here "data source" means simple collections like Lists or
+;;  Vectors, but also potentially large files or generators of infinite data.
+;;
+;;  Transducers...
+;;
+;;  - allow the chaining of operations like map and filter without allocating memory between each step.
+;;  - aren't tied to any specific data type; they need only be implemented once.
+;;  - vastly simplify "data transformation code".
+;;  - have nothing to do with "lazy evaluation".
+;;  - are a joy to use!
+;;
+;;  See the README for examples.
 ;;
 ;;; Code:
 
