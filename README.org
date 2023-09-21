@@ -1,0 +1,225 @@
+#+title: Transducers: Ergonomic, efficient data processing
+
+#+begin_quote
+I think Transducers are a fundamental primitive that decouples critical logic
+from list/sequence processing, and if I had to do Clojure all over I would put
+them at the bottom.
+
+-- Rich Hickey
+#+end_quote
+
+Transducers are an ergonomic and extremely memory-efficient way to process a
+data source. Here "data source" means simple collections like Lists or Vectors,
+but also potentially large files or generators of infinite data.
+
+Transducers...
+
+- allow the chaining of operations like =map= and =filter= without allocating memory between each step.
+- aren't tied to any specific data type; they need only be implemented once.
+- vastly simplify "data transformation code".
+- have nothing to do with "lazy evaluation".
+- are a joy to use!
+
+Example: /While skipping every second line of a file, sum the lengths of only
+evenly-lengthed lines./
+
+#+begin_src emacs-lisp :exports both
+(t-transduce
+  ;; How do we want to process each element?
+  (t-comp (t-step 2) (t-map #'length) (t-filter #'cl-evenp))
+  ;; How do we want to combine all the elements together?
+  #'+
+  ;; What's our original data source?
+  (t-file-read "README.org"))
+#+end_src
+
+#+RESULTS:
+: 2200
+
+Looking for Transducers in other Lisps? Check out the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp]] and [[https://git.sr.ht/~fosskers/transducers.fnl][Fennel]]
+implementations!
+
+* History and Motivation
+
+Originally invented in Clojure and adapted to Scheme as SRFI-171, Transducers
+are an excellent way to think about - and efficiently operate on - collections
+or streams of data. Transduction operations are strict and don't involve
+"laziness" or "thunking" in any way, yet only process the exact amount of data
+you ask them to.
+
+This library is mostly a port of the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp implementation]], with a few
+alterations to account for the minor differences between Common Lisp and Emacs
+Lisp.
+
+* Installation
+
+This package is not (yet) available on MELPA.
+
+* Usage
+
+** Importing
+
+Since this is just a library, you can import it as usual:
+
+#+begin_src emacs-lisp
+(require 'transducers)
+#+end_src
+
+Every function in the library is prefixed by =t-=, so you can then make relatively
+clean calls like:
+
+#+begin_src emacs-lisp :exports both
+(t-transduce (t-map #'1+) #'t-vector '(1 2 3))
+#+end_src
+
+#+RESULTS:
+: [2 3 4]
+
+** Transducers, Reducers, and Sources
+
+#+begin_src emacs-lisp
+;; The fundamental pattern.
+(t-transduce <transducer-chain> <reducer> <source>)
+#+end_src
+
+Data processing largely has three concerns:
+
+1. Where is my data coming from? (sources)
+2. What do I want to do to each element? (transducers)
+3. How do I want to collect the results? (reducers)
+
+Each full "transduction" requires all three. We pass one of each to the
+=transduce= function, which drives the process. It knows how to pull values from
+the source, feed them through the transducer chain, and wrap everything together
+via the reducer.
+
+- Typical transducers are =t-map=, =t-filter=, and =t-take=.
+- Typical reducers are =+=, =t-count=, =t-cons=, and =t-fold=.
+- Typical sources are lists, vectors, strings, hash tables, and files.
+
+/Generators/ are a special kind of source that yield infinite data. Typical
+generators are =t-repeat=, =t-cycle=, and =t-ints=.
+
+Let's sum the squares of the first 1000 odd integers:
+
+#+begin_src emacs-lisp :exports both
+(t-transduce
+ (t-comp (t-filter #'cl-oddp)          ;; (2) Keep only odd numbers.
+         (t-take 1000)                 ;; (3) Keep the first 1000 filtered odds.
+         (t-map (lambda (n) (* n n)))) ;; (4) Square those 1000.
+ #'+         ;; (5) Reducer: Add up all the squares.
+ (t-ints 1)) ;; (1) Source: Generate all positive integers.
+#+end_src
+
+#+RESULTS:
+: 1333333000
+
+Two things of note here:
+
+1. =t-comp= is used here to chain together different transducer steps. Notice that
+   the order appears "backwards" from usual function composition. It may help to
+   imagine that =t-comp= is acting like the =thread-last= macro here.
+2. The reduction via =+= is listed as Step 5, but really it's occuring throughout
+   the transduction process. Each value that makes it through the composed
+   transducer chain is immediately added to an internal accumulator.
+
+Explore the other transducers and reducers to see what's possible! You'll never
+write a =loop= again.
+
+** Using the =t-fold= Reducer
+
+A /reducer/ is a function that "reduces" or "folds" the results of the transducer
+chain into some single value. This could be a collection or some scalar. Some
+reducers can even short-circuit, yielding a desired value early.
+
+=t-fold= is the ultimate reducer, and thus deserves special attention. =t-fold=
+creates an ad-hoc reducer based on a given 2-argument function. An optional seed
+can be given as the initial accumulator value, which also becomes the
+return value in case there were no input left in the transduction.
+
+The normal CL functions =+= and =*= are automatically valid reducers, because they
+yield sane values even when given 0 or 1 arguments. Other functions like =max=
+cannot be used as-is as reducers since they can't be called without arguments.
+For functions like this, =t-fold= is appropriate.
+
+#+begin_src emacs-lisp :exports both
+;; The length of the longest word in this README.
+(let ((xf (t-comp (t-map #'split-string)
+                  #'t-concatenate
+                  (t-filter (lambda (w) (string-match-p "^[a-zA-Z]+$" w)))
+                  (t-map #'length))))
+  (t-transduce xf (t-fold #'max) (t-file-read "README.org")))
+#+end_src
+
+#+RESULTS:
+: 14
+
+In Clojure this function is called =completing=.
+
+* Example Gallery
+
+** Words in a File
+
+#+begin_src emacs-lisp :exports both
+(t-transduce (t-comp (t-map #'split-string)
+                     #'t-concatenate)
+             #'t-count
+             (t-file-read "README.org"))
+#+end_src
+
+#+RESULTS:
+: 1101
+
+** Reading and Writing CSV data
+
+This library also provides two transducers for processing CSV data: =t-from-csv=
+and =t-into-csv=. The original data can come from any source, like a file, open
+buffer, or raw string.
+
+=t-from-csv= reads the data into a stream of Hash Tables with each value keyed to
+the fields provided in the first line. =t-into-csv= reverses the process, given a
+sequence of headers to select.
+
+#+begin_src emacs-lisp :exports both
+(t-transduce (t-comp #'t-from-csv
+                     (t-into-csv ["Age" "Name"]))
+             #'t-cons
+             ["Name,Age,Hair" "Alice,35,Blond" "Bob,26,Black"])
+#+end_src
+
+#+RESULTS:
+| Age,Name | 35,Alice | 26,Bob |
+
+Here we're immediately converting back into CSV strings, but with =t-comp= we're
+free to add as many intermediate steps as we like.
+
+** Reducing into Property Lists and Assocation Lists
+
+There is no special reducer function for plists, because none is needed. If you
+have a stream of cons cells, you can break it up with ~t-uncons~ and then collect
+with ~t-cons~ as usual:
+
+#+begin_src emacs-lisp :exports both
+(t-transduce (t-comp (t-map (lambda (pair) (cons (car pair) (1+ (cdr pair)))))
+                     #'t-uncons)
+             #'t-cons
+             (t-plist '(:a 1 :b 2 :c 3)))
+#+end_src
+
+#+RESULTS:
+| :a | 2 | :b | 3 | :c | 4 |
+
+Likewise, Association Lists are already lists-of-cons-cells, so no special
+treatment is needed:
+
+#+begin_src emacs-lisp :exports both
+(t-transduce #'t-pass #'t-cons '((:a . 1) (:b . 2) (:c . 3)))
+#+end_src
+
+#+RESULTS:
+: ((:a . 1) (:b . 2) (:c . 3))
+
+* Resources
+
+- [[https://clojure.org/reference/transducers][Clojure: Transducers]]
+- [[https://clojure.org/guides/faq#transducers_vs_seqs][Clojure: What are good uses cases for transducers?]]

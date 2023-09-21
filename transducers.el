@@ -954,9 +954,9 @@ two arguments."
   "Reducer: The fundamental reducer.
 
 `t-fold' creates an ad-hoc reducer based on a given 2-argument
-function F. An optional SEED value can also be given as the
-initial accumulator value, which also becomes the return value in
-case there were no input left in the transduction.
+function F. An optional SEED value can be given as the initial
+accumulator value, which also becomes the return value in case
+there were no input left in the transduction.
 
 Functions like `+' and `*' are automatically valid reducers, because they yield
 sane values even when given 0 or 1 arguments. Other functions like `max' cannot
