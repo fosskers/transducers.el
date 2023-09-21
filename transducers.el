@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: July 26, 2023
+;; Modified: September 21, 2023
 ;; Version: 1.0.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
@@ -1037,6 +1037,8 @@ The numbers generated will be between 0 and LIMIT - 1."
   "Source: Endlessly yield random elements from a given array ARR.
 
 Recall that both vectors and strings are considered Arrays."
+  (when (seq-empty-p arr)
+    (error "t-shuffle: Empty input"))
   (let* ((len (length arr))
          (func (lambda () (aref arr (cl-random len)))))
     (make-t-generator :func func)))
