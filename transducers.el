@@ -230,7 +230,8 @@ applying the reducer without arguments (thus achieving an
 array."
   (cl-labels ((recurse (acc)
                 (let ((val (funcall (t-generator-func gen))))
-                  (if (eq t-done val) acc
+                  (if (eq t-done val)
+                      acc
                     (let ((acc (funcall f acc val)))
                       (if (t-reduced-p acc)
                           (t-reduced-val acc)
@@ -1037,13 +1038,14 @@ The numbers generated will be between 0 and LIMIT - 1."
   "Source: Endlessly yield random elements from a given array ARR.
 
 Recall that both vectors and strings are considered Arrays."
-  (when (seq-empty-p arr)
-    (error "t-shuffle: Empty input"))
-  (let* ((len (length arr))
-         (func (lambda () (aref arr (cl-random len)))))
-    (make-t-generator :func func)))
+  (if (seq-empty-p arr)
+      (make-t-generator :func (lambda () t-done))
+    (let* ((len (length arr))
+           (func (lambda () (aref arr (cl-random len)))))
+      (make-t-generator :func func))))
 
 ;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Tamayo" "Natsume"]))
+;; (t-transduce (t-take 5) #'t-cons (t-shuffle []))
 
 (cl-defgeneric t-cycle (seq)
   "Source: Yield the values of a given SEQ endlessly.")
