@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: September 21, 2023
+;; Modified: September 22, 2023
 ;; Version: 1.0.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
@@ -31,15 +31,15 @@
   "A wrapper that signals that reduction has completed."
   val)
 
-(cl-defstruct (t-generator (:copier nil))
+(cl-defstruct (t-generator (:copier nil) (:predicate nil))
   "A wrapper around a function that can potentially yield endless values."
   (func nil :read-only t))
 
-(cl-defstruct (t-filepath (:copier nil))
+(cl-defstruct (t-filepath (:copier nil) (:predicate nil))
   "A wrapper around a string that denotes some filepath."
   path)
 
-(cl-defstruct (t-buffer (:copier nil))
+(cl-defstruct (t-buffer (:copier nil) (:predicate nil))
   "A wrapper around a buffer name."
   name)
 
