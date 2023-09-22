@@ -1,5 +1,7 @@
 #+title: Transducers: Ergonomic, efficient data processing
 
+| [[https://todo.sr.ht/~fosskers/transducers][Issue Tracker]] | [[https://lists.sr.ht/~fosskers/transducers][Mailing List]] |
+
 #+begin_quote
 I think Transducers are a fundamental primitive that decouples critical logic
 from list/sequence processing, and if I had to do Clojure all over I would put
