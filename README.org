@@ -1,7 +1,5 @@
 #+title: Transducers: Ergonomic, efficient data processing
 
-| [[https://todo.sr.ht/~fosskers/transducers][Issue Tracker]] | [[https://lists.sr.ht/~fosskers/transducers][Mailing List]] |
-
 #+begin_quote
 I think Transducers are a fundamental primitive that decouples critical logic
 from list/sequence processing, and if I had to do Clojure all over I would put
@@ -221,7 +219,13 @@ treatment is needed:
 #+RESULTS:
 : ((:a . 1) (:b . 2) (:c . 3))
 
+* Issue Tracker and Mailing List
+
+- [[https://todo.sr.ht/~fosskers/transducers][Issue Tracker]]
+- [[https://lists.sr.ht/~fosskers/transducers][Mailing List]]
+
 * Resources
 
 - [[https://clojure.org/reference/transducers][Clojure: Transducers]]
 - [[https://clojure.org/guides/faq#transducers_vs_seqs][Clojure: What are good uses cases for transducers?]]
+- [[https://www.youtube.com/watch?v=4KqUvG8HPYo][Youtube: Inside Transducers]] (Rich Hickey)
