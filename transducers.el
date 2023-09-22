@@ -802,8 +802,8 @@ whose keys are strings that match the values found in HEADERS."
 ;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))
 
 (defun t--table-vals->csv (headers table)
-  "Given some HEADERS to compare to, convert a hash TABLE to a
- rendered CSV string of its values."
+  "Convert a hash TABLE to a csv string.
+This requires a sequence of HEADERS to match keys by."
   (t--recsv (t-transduce (t-filter-map (lambda (k) (gethash k table)))
                          #'t-cons headers)))
 
@@ -952,7 +952,10 @@ two arguments."
 ;; (t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 10))
 
 (defun t-last (&rest vargs)
-  "Reducer: Yield the last value of the transduction."
+  "Reducer: Yield the last value of the transduction.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
   (pcase vargs
     (`(,_ ,input) input)
     (`(,acc) (if (eq 't--none acc)
