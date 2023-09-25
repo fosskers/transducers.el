@@ -5,11 +5,12 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: September 22, 2023
+;; Modified: September 25, 2023
 ;; Version: 1.0.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
 ;; Package-Requires: ((emacs "25.1"))
+;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -21,7 +22,8 @@
 ;;
 ;;  Transducers...
 ;;
-;;  - allow the chaining of operations like map and filter without allocating memory between each step.
+;;  - allow the chaining of operations like map and filter without allocating
+;;    memory between each step.
 ;;  - aren't tied to any specific data type; they need only be implemented once.
 ;;  - vastly simplify "data transformation code".
 ;;  - have nothing to do with "lazy evaluation".
@@ -277,7 +279,7 @@ file."
                            (nlpos (string-match-p "\n" line)))
                       (cond
                        ;; There was nothing left to read from the underlying file.
-                       ((string-empty-p line) acc)
+                       ((string= line "") acc)
                        ;; A newline character was found in the current line, so we
                        ;; extract only that section and leave the remainder in the
                        ;; temporary buffer for the next iteration.

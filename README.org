@@ -65,7 +65,7 @@ Since this is just a library, you can import it as usual:
 (require 'transducers)
 #+end_src
 
-Every function in the library is prefixed by =t-=, so you can then make relatively
+Every function in the library is prefixed by =t-=, so you can make relatively
 clean calls like:
 
 #+begin_src emacs-lisp :exports both
