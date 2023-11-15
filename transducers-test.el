@@ -1,3 +1,5 @@
+;; -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
+
 (require 'ert)
 (require 'transducers)
 

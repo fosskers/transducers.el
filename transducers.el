@@ -1,15 +1,15 @@
-;;; transducers.el --- Ergonomic, efficient data processing -*- lexical-binding: t; -*-
+;;; transducers.el --- Ergonomic, efficient data processing -*- lexical-binding: t; read-symbol-shorthands: (("t-" . "transducers-")); -*-
 ;;
 ;; Copyright (C) 2023 Colin Woodbury
 ;;
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: September 25, 2023
-;; Version: 1.0.0
+;; Modified: November 16, 2023
+;; Version: 1.0.1
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Requires: ((emacs "28.1"))
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
 ;; This file is not part of GNU Emacs.
@@ -82,7 +82,7 @@ lambdas or named functions by their symbol."
   "Ensure that X is reduced."
   (if (t-reduced-p x)
       x
-    (make-t-reduced :val x)))
+    (make-transducers-reduced :val x)))
 
 (defun t--preserving-reduced (reducer)
   "Given a REDUCER, wraps a reduced value twice.
@@ -95,7 +95,7 @@ value and try to continue the transducing process."
   (lambda (a b)
     (let ((result (funcall reducer a b)))
       (if (t-reduced-p result)
-          (make-t-reduced :val result)
+          (make-transducers-reduced :val result)
         result))))
 
 ;; --- Entry Functions --- ;;
@@ -483,7 +483,7 @@ Stops the transduction as soon as any element fails the test."
   (lambda (reducer)
     (lambda (result &rest inputs)
       (if inputs (if (not (apply pred inputs))
-                     (make-t-reduced :val result)
+                     (make-transducers-reduced :val result)
                    (apply reducer result inputs))
         (funcall reducer result)))))
 
@@ -917,7 +917,7 @@ Short-circuits the transduction as soon as the condition is met."
                         ;; NOTE We manually return `t' here because there is no
                         ;; guarantee that `input' iteslf was not `nil' and still
                         ;; passed the `if' when given to `pred'!
-                        (make-t-reduced :val t)
+                        (make-transducers-reduced :val t)
                       nil))
       (`(,acc) acc)
       (_ nil))))
@@ -932,7 +932,7 @@ Short-circuits with nil if any element fails the test."
     (pcase vargs
       (`(,acc ,input) (if (and acc (funcall pred input))
                           t
-                        (make-t-reduced :val nil)))
+                        (make-transducers-reduced :val nil)))
       (`(,acc) acc)
       (_ t))))
 
@@ -944,7 +944,7 @@ Short-circuits with nil if any element fails the test."
 Regardings VARGS: as a \"reducer\", this function expects zero to
 two arguments."
   (pcase vargs
-    (`(,_ ,input) (make-t-reduced :val input))
+    (`(,_ ,input) (make-transducers-reduced :val input))
     (`(,acc) (if (eq 't--none acc)
                  (error "t-first: Empty transduction")
                acc))
@@ -1006,7 +1006,7 @@ Yields nil if no such element were found."
   (lambda (&rest vargs)
     (pcase vargs
       (`(,_ ,input) (if (funcall pred input)
-                        (make-t-reduced :val input)
+                        (make-transducers-reduced :val input)
                       nil))
       (`(,acc) acc)
       (_ nil))))
@@ -1023,7 +1023,7 @@ Throws away all results and yields nil."
 
 (defun t-repeat (item)
   "Source: Endlessly yield a given ITEM."
-  (make-t-generator :func (lambda (&rest _) item)))
+  (make-transducers-generator :func (lambda (&rest _) item)))
 
 ;; (t-transduce (t-take 4) #'t-cons (t-repeat 9))
 
@@ -1039,7 +1039,7 @@ within your transducer chain."
                  (let ((old curr))
                    (setf curr (+ curr step))
                    old))))
-    (make-t-generator :func func)))
+    (make-transducers-generator :func func)))
 
 ;; (t-transduce (t-take 10) #'t-cons (t-ints 0 :step 2))
 
@@ -1047,7 +1047,7 @@ within your transducer chain."
   "Source: Yield an endless stream of random numbers.
 
 The numbers generated will be between 0 and LIMIT - 1."
-  (make-t-generator :func (lambda () (cl-random limit))))
+  (make-transducers-generator :func (lambda () (cl-random limit))))
 
 ;; (t-transduce (t-take 25) #'t-cons (t-random 10))
 
@@ -1056,10 +1056,10 @@ The numbers generated will be between 0 and LIMIT - 1."
 
 Recall that both vectors and strings are considered Arrays."
   (if (seq-empty-p arr)
-      (make-t-generator :func (lambda () t-done))
+      (make-transducers-generator :func (lambda () t-done))
     (let* ((len (length arr))
            (func (lambda () (aref arr (cl-random len)))))
-      (make-t-generator :func func))))
+      (make-transducers-generator :func func))))
 
 ;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Tamayo" "Natsume"]))
 ;; (t-transduce (t-take 5) #'t-cons (t-shuffle []))
@@ -1070,7 +1070,7 @@ Recall that both vectors and strings are considered Arrays."
 (cl-defmethod t-cycle ((seq list))
   "Source: Yield the values of a given list SEQ endlessly."
   (if (null seq)
-      (make-t-generator :func (lambda () t-done))
+      (make-transducers-generator :func (lambda () t-done))
     (let* ((curr seq)
            (func (lambda ()
                    (cond ((null curr)
@@ -1079,14 +1079,14 @@ Recall that both vectors and strings are considered Arrays."
                          (t (let ((next (car curr)))
                               (setf curr (cdr curr))
                               next))))))
-      (make-t-generator :func func))))
+      (make-transducers-generator :func func))))
 
 (cl-defmethod t-cycle ((seq array))
   "Source: Yield the values of a given array SEQ endlessly.
 
 This works for any type of array, like vectors and strings."
   (if (zerop (length seq))
-      (make-t-generator :func (lambda () t-done))
+      (make-transducers-generator :func (lambda () t-done))
     (let* ((ix 0)
            (len (length seq))
            (func (lambda ()
@@ -1096,7 +1096,7 @@ This works for any type of array, like vectors and strings."
                          (t (let ((next (aref seq ix)))
                               (setf ix (1+ ix))
                               next))))))
-      (make-t-generator :func func))))
+      (make-transducers-generator :func func))))
 
 ;; (t-transduce (t-take 10) #'t-cons (t-cycle '(1 2 3)))
 
@@ -1104,13 +1104,13 @@ This works for any type of array, like vectors and strings."
 
 (defun t-buffer-read (buffer)
   "Source: Given a BUFFER or its name, read its contents line by line."
-  (make-t-buffer :name buffer))
+  (make-transducers-buffer :name buffer))
 
 ;; (t-transduce #'t-pass #'t-count (t-buffer-read (current-buffer)))
 
 (defun t-file-read (path)
   "Source: Given a PATH, read its contents line by line."
-  (make-t-filepath :path path))
+  (make-transducers-filepath :path path))
 
 ;; (t-transduce (t-comp (t-filter (lambda (line) (string-prefix-p "[" line)))
 ;;                      (t-map #'nreverse))
@@ -1118,7 +1118,7 @@ This works for any type of array, like vectors and strings."
 
 (defun t-plist (plist)
   "Source: Yield key-value pairs from a PLIST."
-  (make-t-plist :list plist))
+  (make-transducers-plist :list plist))
 
 ;; (t-plist '(:a 1 :b 2 :c 3))
 
