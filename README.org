@@ -1,3 +1,4 @@
+# -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
 #+title: Transducers: Ergonomic, efficient data processing
 
 #+begin_quote
@@ -34,7 +35,7 @@ evenly-lengthed lines./
 #+end_src
 
 #+RESULTS:
-: 2200
+: 2120
 
 Looking for Transducers in other Lisps? Check out the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp]] and [[https://git.sr.ht/~fosskers/transducers.fnl][Fennel]]
 implementations!
@@ -65,8 +66,16 @@ Since this is just a library, you can import it as usual:
 (require 'transducers)
 #+end_src
 
-Every function in the library is prefixed by =t-=, so you can make relatively
-clean calls like:
+Every function in the library is prefixed by =transducers-= but you're encouraged
+to use ~read-symbol-shorthands~ to shorten this to =t-=. This can be done
+interactively in your own files via ~add-file-local-variable-prop-line~, which you
+can use to set your top line to:
+
+#+begin_src emacs-lisp
+;; -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
+#+end_src
+
+After which you can make relatively clean calls like:
 
 #+begin_src emacs-lisp :exports both
 (t-transduce (t-map #'1+) #'t-vector '(1 2 3))
@@ -74,6 +83,11 @@ clean calls like:
 
 #+RESULTS:
 : [2 3 4]
+
+This can also be done in =.org= files, so that Transducers can be used in their
+short forms even in Babel source blocks. That's exactly what this README does!
+
+The remaining examples below use =t-= for brevity.
 
 ** Transducers, Reducers, and Sources
 
@@ -89,7 +103,7 @@ Data processing largely has three concerns:
 3. How do I want to collect the results? (reducers)
 
 Each full "transduction" requires all three. We pass one of each to the
-=transduce= function, which drives the process. It knows how to pull values from
+=t-transduce= function, which drives the process. It knows how to pull values from
 the source, feed them through the transducer chain, and wrap everything together
 via the reducer.
 

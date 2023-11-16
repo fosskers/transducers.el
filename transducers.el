@@ -9,7 +9,7 @@
 ;; Version: 1.0.1
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "25.1"))
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
 ;; This file is not part of GNU Emacs.
@@ -35,6 +35,20 @@
 
 (require 'cl-lib)
 (require 'ring)
+
+;; NOTE
+;;
+;; This library uses the `read-symbol-shorthands' feature introduced in Emacs
+;; 28. While browsing this file it may appear as if most of the functions are
+;; prefixed by `t-', but in fact the symbols are exported with the full prefix
+;; `transducers-'. Every user is then free to abbreviate the function symbols as
+;; they wish in their own files, just like import systems in other languages
+;; allow.
+;;
+;; To enable this abbreviation in your own Emacs Lisp files, interactively call
+;; either `add-file-local-variable-prop-line' or `add-file-local-variable' and
+;; set `read-symbol-shorthands' to a value like (("t-" . "transducers-")). You
+;; can see an example of this in the top line of this file.
 
 ;; --- Utilities --- ;;
 
