@@ -9,7 +9,7 @@
 ;; Version: 1.0.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
-;; Package-Requires: ((emacs "25.1"))
+;; Package-Requires: ((emacs "28.1"))
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
 ;; This file is not part of GNU Emacs.
