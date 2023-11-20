@@ -1,4 +1,4 @@
-;;; transducers.el --- Ergonomic, efficient data processing -*- lexical-binding: t; read-symbol-shorthands: (("t-" . "transducers-")); -*-
+;;; transducers.el --- Ergonomic, efficient data processing -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2023 Colin Woodbury
 ;;
@@ -1138,3 +1138,7 @@ This works for any type of array, like vectors and strings."
 
 (provide 'transducers)
 ;;; transducers.el ends here
+
+;; Local Variables:
+;; read-symbol-shorthands: (("t-" . "transducers-"))
+;; End:

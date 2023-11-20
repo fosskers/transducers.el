@@ -1,4 +1,4 @@
-;; -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
+;; -*- lexical-binding: t; -*-
 
 (require 'ert)
 (require 'transducers)
@@ -162,3 +162,7 @@
                  (t-transduce (t-comp #'t-from-csv (t-into-csv '("Name" "Age")))
                               #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))))
   (should (equal "1,hi,3" (t--recsv '(1 "hi" 3)))))
+
+;; Local Variables:
+;; read-symbol-shorthands: (("t-" . "transducers-"))
+;; End:
