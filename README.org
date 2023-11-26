@@ -75,7 +75,15 @@ can use to set your top line to:
 ;; -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
 #+end_src
 
-After which you can make relatively clean calls like:
+or via ~add-file-local-variable~, which results in:
+
+#+begin_src emacs-lisp
+;; Local Variables:
+;; read-symbol-shorthands: (("t-" . "transducers-"))
+;; End:
+#+end_src
+
+at the bottom of the file. After this, you can make relatively clean calls like:
 
 #+begin_src emacs-lisp :exports both
 (t-transduce (t-map #'1+) #'t-vector '(1 2 3))
