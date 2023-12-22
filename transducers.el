@@ -5,8 +5,8 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: November 26, 2023
-;; Version: 1.0.0
+;; Modified: December 22, 2023
+;; Version: 1.1.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
 ;; Package-Requires: ((emacs "28.1"))
@@ -68,7 +68,7 @@
   path)
 
 (cl-defstruct (t-buffer (:copier nil) (:predicate nil))
-  "A wrapper around a buffer name."
+  "A wrapper around a buffer object or its name."
   name)
 
 (cl-defstruct (t-plist (:copier nil) (:predicate nil))
@@ -153,7 +153,7 @@ reducer function F, and a concrete filepath SOURCE, perform a
 full, strict transduction."
   (t--filepath-transduce xform f source))
 
-(cl-defmethod t-transduce (xform f (source t-buffer))
+(cl-defmethod t-transduce (xform f (source buffer))
   "Transduce over a buffer.
 
 Given a composition of transducer functions (the XFORM), a
@@ -162,6 +162,16 @@ strict transduction.
 
 The buffer can be a buffer object or just a buffer name."
   (t--buffer-transduce xform f source))
+
+(cl-defmethod t-transduce (xform f (source t-buffer))
+  "Transduce over a buffer.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete buffer SOURCE, perform a full,
+strict transduction.
+
+The buffer can be a buffer object or just a buffer name."
+  (t--buffer-transduce xform f (t-buffer-name source)))
 
 (cl-defmethod t-transduce (xform f (source hash-table))
   "Transduce over a Hash Table.
@@ -325,7 +335,7 @@ F is the transducer/reducer composition, IDENTITY the result of
 applying the reducer without arguments (thus achieving an
 \"element\" or \"zero\" value), and BUFFER is our guaranteed
 source buffer."
-  (with-current-buffer (t-buffer-name buffer)
+  (with-current-buffer buffer
     (let ((eof (point-max)))
       (goto-char (point-min))
       (cl-labels ((recurse (acc)

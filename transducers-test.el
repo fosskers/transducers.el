@@ -155,7 +155,13 @@
   (should (equal '(1 1 1) (t-transduce (t-take 3) #'t-cons (t-repeat 1))))
   (should (equal '(0 0 0) (t-transduce (t-take 3) #'t-cons (t-random 1))))
   (should (equal [] (t-transduce #'t-pass #'t-vector (t-shuffle []))))
-  (should (equal [1 1 1] (t-transduce (t-take 3) #'t-vector (t-shuffle [1])))))
+  (should (equal [1 1 1] (t-transduce (t-take 3) #'t-vector (t-shuffle [1]))))
+  (should (equal 2 (with-temp-buffer
+                     (insert "hello\nworld!")
+                     (t-transduce #'t-pass #'t-count (t-buffer-read (current-buffer))))))
+  (should (equal 2 (with-temp-buffer
+                     (insert "hello\nworld!")
+                     (t-transduce #'t-pass #'t-count (current-buffer))))))
 
 (ert-deftest transducers-csv ()
   (should (equal '("Name,Age" "Colin,35" "Tamayo,26")

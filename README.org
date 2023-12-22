@@ -192,6 +192,29 @@ In Clojure this function is called =completing=.
 #+RESULTS:
 : 1101
 
+** Splitting a string by its lines
+
+Transducing over a string yields its characters:
+
+#+begin_src emacs-lisp :exports both
+(t-transduce #'t-pass #'t-count "hello\nworld!")
+#+end_src
+
+#+RESULTS:
+: 12
+
+If you want to transduce over its lines instead, create a temporary buffer
+first:
+
+#+begin_src emacs-lisp :exports both
+(with-temp-buffer
+  (insert "hello\nworld!")
+  (t-transduce #'t-pass #'t-cons (current-buffer)))
+#+end_src
+
+#+RESULTS:
+| hello | world! |
+
 ** Reading and Writing CSV data
 
 This library also provides two transducers for processing CSV data: =t-from-csv=
