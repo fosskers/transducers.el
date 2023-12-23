@@ -238,6 +238,38 @@ sequence of headers to select.
 Here we're immediately converting back into CSV strings, but with =t-comp= we're
 free to add as many intermediate steps as we like.
 
+** Reading and Writing JSON data
+
+It is also possible to read from and write to JSON buffers. Reading assumes that
+the buffer contains a top-level array. Objects are yielded as plists.
+
+#+begin_src emacs-lisp :exports both :results verbatim
+(with-temp-buffer
+  (insert "[{\"name\": \"Colin\"},{\"name\": \"Jack\"}]")
+  (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))
+#+end_src
+
+#+RESULTS:
+: ((:name "Colin") (:name "Jack"))
+
+Note that ~t-from-json-buffer~ is a "source".
+
+Likewise, ~t-into-json-buffer~ is a reducer that writes a stream of lisp values
+back into the current buffer.
+
+#+begin_src emacs-lisp :exports both
+(with-temp-buffer
+  (t-transduce #'t-pass #'t-into-json-buffer '((:name "Colin") (:name "Jack")))
+  (buffer-string))
+#+end_src
+
+#+RESULTS:
+: [{"name":"Colin"},{"name":"Jack"}]
+
+Note that ~t-into-json-buffer~ makes no assumptions about where point initially is
+the current buffer, nor is the buffer automatically saved. Such concerns are the
+responsibility of the user.
+
 ** Reducing into Property Lists and Assocation Lists
 
 There is no special reducer function for plists, because none is needed. If you
