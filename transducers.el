@@ -1107,6 +1107,30 @@ Throws away all results and yields nil."
 
 ;; (t-transduce (t-map (lambda (n) (message "%d" n))) #'t-for-each [1 2 3 4])
 
+(defun t-into-json-buffer (&rest vargs)
+  "Reducer: Write a stream of objects into the current buffer as json.
+
+Makes no assumptions about the position of point or current
+contents of the buffer. That is left to the user to manage, as
+well as the saving of the buffer after writing.
+
+Yields t upon success."
+  (pcase vargs
+    (`(,_ ,input) (progn
+                    (insert (json-serialize input))
+                    (insert ",")))
+    (`(,_) (progn
+             ;; Clear the previously written comma, unless the stream was empty.
+             (unless (equal ?\[ (char-before))
+               (delete-char -1))
+             (insert "]")
+             t))
+    (_ (insert "["))))
+
+;; (with-temp-buffer
+;;   (t-transduce #'t-pass #'t-into-json-buffer '((:name "Colin") (:name "Jack")))
+;;   (buffer-string))
+
 ;; --- Generators --- ;;
 
 (defun t-repeat (item)

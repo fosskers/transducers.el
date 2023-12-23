@@ -170,6 +170,10 @@
   (should (equal "1,hi,3" (t--recsv '(1 "hi" 3)))))
 
 (ert-deftest transducers-json ()
+  (should (equal []
+                 (with-temp-buffer
+                   (insert "[]")
+                   (t-transduce #'t-pass #'t-vector (t-json-read (current-buffer))))))
   (should (equal [1 2 3 4]
                  (with-temp-buffer
                    (insert "[1,2,3,4]")
@@ -180,7 +184,19 @@
                    (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))))
   (should-error (with-temp-buffer
                   (insert "1")
-                  (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))))
+                  (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer)))))
+  (should (equal "[]"
+                 (with-temp-buffer
+                   (t-transduce #'t-pass #'t-into-json-buffer [])
+                   (buffer-string))))
+  (should (equal "[1,2,3,4]"
+                 (with-temp-buffer
+                   (t-transduce #'t-pass #'t-into-json-buffer [1 2 3 4])
+                   (buffer-string))))
+  (should (equal "[{\"name\":\"Colin\"},{\"name\":\"Jack\"}]"
+                 (with-temp-buffer
+                   (t-transduce #'t-pass #'t-into-json-buffer '((:name "Colin") (:name "Jack")))
+                   (buffer-string)))))
 
 ;; Local Variables:
 ;; read-symbol-shorthands: (("t-" . "transducers-"))
