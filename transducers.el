@@ -1104,8 +1104,8 @@ Yields nil if no such element were found."
 (defun t-for-each (&rest _vargs)
   "Reducer: Run through every item in a transduction for their side effects.
 
-Throws away all results and yields nil."
-  nil)
+Throws away all results and yields t."
+  t)
 
 ;; (t-transduce (t-map (lambda (n) (message "%d" n))) #'t-for-each [1 2 3 4])
 

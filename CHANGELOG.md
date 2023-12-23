@@ -14,6 +14,10 @@
   instead of needing to wrap it in `t-buffer-read`. `t-buffer-read` is however
   still necessary if you wish to transduce over a buffer via its name (a string).
 
+#### Changed
+
+- `t-for-each` now yields `t` instead of `nil`.
+
 ## 1.0.0
 
 Initial release.
