@@ -173,11 +173,11 @@
   (should (equal []
                  (with-temp-buffer
                    (insert "[]")
-                   (t-transduce #'t-pass #'t-vector (t-json-read (current-buffer))))))
+                   (t-transduce #'t-pass #'t-vector (t-from-json-buffer (current-buffer))))))
   (should (equal [1 2 3 4]
                  (with-temp-buffer
                    (insert "[1,2,3,4]")
-                   (t-transduce #'t-pass #'t-vector (t-json-read (current-buffer))))))
+                   (t-transduce #'t-pass #'t-vector (t-from-json-buffer (current-buffer))))))
   (should (equal '((:name "Colin") (:name "Jack"))
                  (with-temp-buffer
                    (insert "  [    {\"name\": \"Colin\"}, \n\t  {\"name\": \"Jack\"}  ]")

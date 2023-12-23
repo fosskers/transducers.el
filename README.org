@@ -241,7 +241,8 @@ free to add as many intermediate steps as we like.
 ** Reading and Writing JSON data
 
 It is also possible to read from and write to JSON buffers. Reading assumes that
-the buffer contains a top-level array. Objects are yielded as plists.
+the buffer contains a top-level array. By default, yielded objects are plists,
+but this can be customized via the ~:object-type~ keyword.
 
 #+begin_src emacs-lisp :exports both :results verbatim
 (with-temp-buffer

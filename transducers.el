@@ -78,7 +78,8 @@
 (cl-defstruct (t-json (:copier nil) (:predicate nil))
   "A wrapper around a buffer object or its name.
 The buffer is assumed to contain a json array."
-  buffer)
+  buffer
+  (object-type 'plist :read-only t :type symbol))
 
 (defun t-ensure-function (arg)
   "Is some ARG a function?"
@@ -384,6 +385,7 @@ applying the reducer without arguments (thus achieving an
 \"element\" or \"zero\" value), and BUFFER is our guaranteed
 source buffer."
   (let ((buf (t-json-buffer buffer))
+        (obt (t-json-object-type buffer))
         (eof (point-max)))
     (with-current-buffer buf
       (goto-char (point-min))
@@ -399,7 +401,7 @@ source buffer."
                     (t--forward-to-json-token)
                     (if (or (equal ?\] (char-after)) (= eof (point)))
                         acc
-                      (let* ((json (json-parse-buffer :object-type 'plist))
+                      (let* ((json (json-parse-buffer :object-type obt))
                              (acc  (funcall f acc json)))
                         (if (t-reduced-p acc)
                             (t-reduced-val acc)
@@ -1234,11 +1236,16 @@ This works for any type of array, like vectors and strings."
 
 ;; (t-plist '(:a 1 :b 2 :c 3))
 
-(defun t-from-json-buffer (buffer)
+(cl-defun t-from-json-buffer (buffer &key (object-type 'plist))
   "Source: Given a BUFFER or its name, read its contents as json.
 It is assumed that the buffer contains a json array, and that
-it's first character is thus a [."
-  (make-transducers-json :buffer buffer))
+it's first non-whitespace character is thus a [.
+
+The OBJECT-TYPE key accepted by this function is passed as-is to
+`json-parse-buffer', which is used internally to parse json
+values. The expected value of OBJECT-TYPE is one of `hash-table',
+`plist', or `alist'."
+  (make-transducers-json :buffer buffer :object-type object-type))
 
 (provide 'transducers)
 ;;; transducers.el ends here
