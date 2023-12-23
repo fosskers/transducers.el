@@ -169,6 +169,19 @@
                               #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))))
   (should (equal "1,hi,3" (t--recsv '(1 "hi" 3)))))
 
+(ert-deftest transducers-json ()
+  (should (equal [1 2 3 4]
+                 (with-temp-buffer
+                   (insert "[1,2,3,4]")
+                   (t-transduce #'t-pass #'t-vector (t-json-read (current-buffer))))))
+  (should (equal '((:name "Colin") (:name "Jack"))
+                 (with-temp-buffer
+                   (insert "  [    {\"name\": \"Colin\"}, \n\t  {\"name\": \"Jack\"}  ]")
+                   (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))))
+  (should-error (with-temp-buffer
+                  (insert "1")
+                  (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))))
+
 ;; Local Variables:
 ;; read-symbol-shorthands: (("t-" . "transducers-"))
 ;; End:

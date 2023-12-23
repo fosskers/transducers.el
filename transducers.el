@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: December 22, 2023
+;; Modified: December 23, 2023
 ;; Version: 1.1.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
@@ -69,10 +69,16 @@
 
 (cl-defstruct (t-buffer (:copier nil) (:predicate nil))
   "A wrapper around a buffer object or its name."
-  name)
+  buffer)
 
 (cl-defstruct (t-plist (:copier nil) (:predicate nil))
+  "A wrapper around a plist."
   (list nil :read-only t :type list))
+
+(cl-defstruct (t-json (:copier nil) (:predicate nil))
+  "A wrapper around a buffer object or its name.
+The buffer is assumed to contain a json array."
+  buffer)
 
 (defun t-ensure-function (arg)
   "Is some ARG a function?"
@@ -171,7 +177,7 @@ reducer function F, and a concrete buffer SOURCE, perform a full,
 strict transduction.
 
 The buffer can be a buffer object or just a buffer name."
-  (t--buffer-transduce xform f (t-buffer-name source)))
+  (t--buffer-transduce xform f (t-buffer-buffer source)))
 
 (cl-defmethod t-transduce (xform f (source hash-table))
   "Transduce over a Hash Table.
@@ -192,6 +198,14 @@ strict transduction.
 
 Yields key-value pairs as cons cells."
   (t--plist-transduce xform f source))
+
+(cl-defmethod t-transduce (xform f (source t-json))
+  "Transduce over a buffer containing json data.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete buffer SOURCE, perform a full,
+strict transduction."
+  (t--json-transduce xform f source))
 
 (defun t--list-transduce (xform f coll)
   "Transduce over lists.
@@ -350,6 +364,56 @@ source buffer."
                           (progn (forward-line 1)
                                  (recurse acc)))))))
         (recurse identity)))))
+
+(defun t--json-transduce (xform f buffer)
+  "Transduce over a json buffer.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete BUFFER, perform a full, strict
+transduction."
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (t--json-reduce xf init buffer)))
+    (funcall xf result)))
+
+(defun t--json-reduce (f identity buffer)
+  "Reduce over a buffer of json data.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), and BUFFER is our guaranteed
+source buffer."
+  (let ((buf (t-json-buffer buffer))
+        (eof (point-max)))
+    (with-current-buffer buf
+      (goto-char (point-min))
+      ;; In case the buffer begins with whitespace.
+      (t--forward-to-json-token)
+      ;; Is this buffer actually a json array?
+      (unless (equal ?\[ (char-after))
+        (error "Buffer %s does not contain a JSON array" buf))
+      ;; Move past the opening bracket...
+      (forward-char)
+      ;; ...then yield all entries.
+      (cl-labels ((recurse (acc)
+                    (t--forward-to-json-token)
+                    (if (or (equal ?\] (char-after)) (= eof (point)))
+                        acc
+                      (let* ((json (json-parse-buffer :object-type 'plist))
+                             (acc  (funcall f acc json)))
+                        (if (t-reduced-p acc)
+                            (t-reduced-val acc)
+                          (recurse acc))))))
+        (recurse identity)))))
+
+;; (with-temp-buffer
+;;   (insert "  [    {\"name\": \"Colin\"}, \n\t  {\"name\": \"Jack\"}  ]")
+;;   (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))
+
+(defun t--forward-to-json-token ()
+  "Move point to before the next readable json token."
+  (interactive)
+  (re-search-forward "[ ,\\n\\t]*" nil t))
 
 (defun t--plist-transduce (xform f coll)
   "Transduce over a Property List.
@@ -1128,7 +1192,7 @@ This works for any type of array, like vectors and strings."
 
 (defun t-buffer-read (buffer)
   "Source: Given a BUFFER or its name, read its contents line by line."
-  (make-transducers-buffer :name buffer))
+  (make-transducers-buffer :buffer buffer))
 
 ;; (t-transduce #'t-pass #'t-count (t-buffer-read (current-buffer)))
 
@@ -1145,6 +1209,12 @@ This works for any type of array, like vectors and strings."
   (make-transducers-plist :list plist))
 
 ;; (t-plist '(:a 1 :b 2 :c 3))
+
+(defun t-from-json-buffer (buffer)
+  "Source: Given a BUFFER or its name, read its contents as json.
+It is assumed that the buffer contains a json array, and that
+it's first character is thus a [."
+  (make-transducers-json :buffer buffer))
 
 (provide 'transducers)
 ;;; transducers.el ends here
