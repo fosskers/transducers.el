@@ -393,7 +393,7 @@ source buffer."
       (t--forward-to-json-token)
       ;; Is this buffer actually a json array?
       (unless (equal ?\[ (char-after))
-        (error "Buffer %s does not contain a JSON array" buf))
+        (error "Buffer %s does not contain a top-level JSON array" buf))
       ;; Move past the opening bracket...
       (forward-char)
       ;; ...then yield all entries.
@@ -414,7 +414,6 @@ source buffer."
 
 (defun t--forward-to-json-token ()
   "Move point to before the next readable json token."
-  (interactive)
   (re-search-forward "[ ,\\n\\t]*" nil t))
 
 (defun t--plist-transduce (xform f coll)
@@ -1116,7 +1115,10 @@ Makes no assumptions about the position of point or current
 contents of the buffer. That is left to the user to manage, as
 well as the saving of the buffer after writing.
 
-Yields t upon success."
+Yields t upon success.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
   (pcase vargs
     (`(,_ ,input) (progn
                     (insert (json-serialize input))
