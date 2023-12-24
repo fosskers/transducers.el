@@ -1,6 +1,8 @@
 # Transducers
 
-## Unreleased
+## 1.1.0 (2023-12-24)
+
+Merry Christmas. The code itself was written in airports.
 
 #### Added
 
