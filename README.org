@@ -297,11 +297,6 @@ treatment is needed:
 #+RESULTS:
 : ((:a . 1) (:b . 2) (:c . 3))
 
-* Issue Tracker and Mailing List
-
-- [[https://todo.sr.ht/~fosskers/transducers][Issue Tracker]]
-- [[https://lists.sr.ht/~fosskers/transducers][Mailing List]]
-
 * Resources
 
 - [[https://clojure.org/reference/transducers][Clojure: Transducers]]
