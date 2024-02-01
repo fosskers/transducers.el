@@ -37,16 +37,16 @@ evenly-lengthed lines./
 #+RESULTS:
 : 2120
 
-Looking for Transducers in other Lisps? Check out the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp]] and [[https://git.sr.ht/~fosskers/transducers.fnl][Fennel]]
+Looking for Transducers in other Lisps? Check out the [[https://codeberg.org/fosskers/cl-transducers][Common Lisp]] and [[https://codeberg.org/fosskers/transducers.fnl][Fennel]]
 implementations!
 
 * History and Motivation
 
-Originally invented in Clojure and adapted to Scheme as SRFI-171, Transducers
-are an excellent way to think about - and efficiently operate on - collections
-or streams of data. Transduction operations are strict and don't involve
-"laziness" or "thunking" in any way, yet only process the exact amount of data
-you ask them to.
+Originally invented in Clojure and later adapted to other Lisps, Transducers are
+an excellent way to think about - and efficiently operate on - collections or
+streams of data. Transduction operations are strict and don't involve "laziness"
+or "thunking" in any way, yet only process the exact amount of data you ask them
+to.
 
 This library is mostly a port of the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp implementation]], with a few
 alterations to account for the minor differences between Common Lisp and Emacs
