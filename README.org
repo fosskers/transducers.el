@@ -54,7 +54,7 @@ Lisp.
 
 * Installation
 
-This package is not (yet) available on MELPA.
+This package is [[https://melpa.org/#/transducers][available on MELPA]].
 
 * Usage
 
