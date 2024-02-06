@@ -68,14 +68,8 @@ Since this is just a library, you can import it as usual:
 
 Every function in the library is prefixed by =transducers-= but you're encouraged
 to use ~read-symbol-shorthands~ to shorten this to =t-=. This can be done
-interactively in your own files via ~add-file-local-variable-prop-line~, which you
-can use to set your top line to:
-
-#+begin_src emacs-lisp
-;; -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
-#+end_src
-
-or via ~add-file-local-variable~, which results in:
+interactively in your own files via ~add-file-local-variable~, which you
+can use to set this at the bottom of your file:
 
 #+begin_src emacs-lisp
 ;; Local Variables:
@@ -83,7 +77,7 @@ or via ~add-file-local-variable~, which results in:
 ;; End:
 #+end_src
 
-at the bottom of the file. After this, you can make relatively clean calls like:
+After this, you can make relatively clean calls like:
 
 #+begin_src emacs-lisp :exports both
 (t-transduce (t-map #'1+) #'t-vector '(1 2 3))
@@ -206,14 +200,14 @@ Transducing over a string yields its characters:
 If you want to transduce over its lines instead, create a temporary buffer
 first:
 
-#+begin_src emacs-lisp :exports both
+#+begin_src emacs-lisp :exports both :results verbatim
 (with-temp-buffer
   (insert "hello\nworld!")
   (t-transduce #'t-pass #'t-cons (current-buffer)))
 #+end_src
 
 #+RESULTS:
-| hello | world! |
+: ("hello" "world!")
 
 ** Reading and Writing CSV data
 

@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: December 23, 2023
+;; Modified: February  6, 2024
 ;; Version: 1.1.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
@@ -41,9 +41,9 @@
 ;; allow.
 ;;
 ;; To enable this abbreviation in your own Emacs Lisp files, interactively call
-;; either `add-file-local-variable-prop-line' or `add-file-local-variable' and
-;; set `read-symbol-shorthands' to a value like (("t-" . "transducers-")). You
-;; can see an example of this at the bottom of this file (transducers.el).
+;; `add-file-local-variable' and set `read-symbol-shorthands' to a value like
+;; (("t-" . "transducers-")). You can see an example of this at the bottom of
+;; this file (transducers.el).
 ;;
 ;;; Code:
 
