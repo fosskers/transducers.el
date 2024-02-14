@@ -1,5 +1,11 @@
 # Transducers
 
+## Unreleased
+
+#### Changed
+
+- `t-anyp` and `t-allp` now yield `t` instead of just non-nil when they succeed.
+
 ## 1.1.0 (2023-12-24)
 
 Merry Christmas. The code itself was written in airports.
