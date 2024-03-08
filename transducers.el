@@ -5,8 +5,8 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: February 14, 2024
-;; Version: 1.1.0
+;; Modified: March  8, 2024
+;; Version: 1.2.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
 ;; Package-Requires: ((emacs "28.1"))
@@ -98,6 +98,10 @@ lambdas or named functions by their symbol."
                  (lambda (&rest arguments) (funcall f (apply g arguments)))))
              functions
              :initial-value function))
+
+(defun t-const (item)
+  "Return a function that ignores its argument and returns ITEM instead."
+  (lambda (_x) item))
 
 (defun t--ensure-reduced (x)
   "Ensure that X is reduced."
@@ -1005,6 +1009,18 @@ two arguments."
     (`() '())))
 
 ;; (t-transduce (t-map #'1+) #'t-cons '(1 2 3))
+
+(defun t-snoc (&rest vargs)
+  "Reducer: Collect all results as a list, but results are reversed.
+In theory, slightly more performant than `cons' since it performs no final
+reversal.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc) acc)
+    (`() '())))
 
 (defun t-string (&rest vargs)
   "Reducer: Collect all results as a string.
