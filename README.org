@@ -33,6 +33,9 @@ evenly-lengthed lines./
   (t-file-read "README.org"))
 #+end_src
 
+#+RESULTS:
+: 6690
+
 Looking for Transducers in other Lisps? Check out the [[https://codeberg.org/fosskers/cl-transducers][Common Lisp]] and [[https://codeberg.org/fosskers/transducers.fnl][Fennel]]
 implementations!
 
