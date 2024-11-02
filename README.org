@@ -436,7 +436,7 @@ keys are strings that match the values found in HEADERS.
 Reducers describe how to fold the stream of items down into a single result, be
 it either a new collection or a scalar.
 
-Some reducers, like ~first~, can also force the entire transduction to
+Some reducers, like ~t-first~, can also force the entire transduction to
 short-circuit.
 
 *** t-cons, t-snoc, t-vector, t-string, t-hash-table
