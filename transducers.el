@@ -79,6 +79,10 @@
   "A wrapper around a plist."
   (list nil :read-only t :type list))
 
+(cl-defstruct (t-reversed (:copier nil) (:predicate nil))
+  "A wrapper around an array/vector/string type."
+  (array nil :read-only t :type array))
+
 (cl-defstruct (t-json (:copier nil) (:predicate nil))
   "A wrapper around a buffer object or its name.
 The buffer is assumed to contain a json array."
@@ -147,6 +151,14 @@ Given a composition of transducer functions (the XFORM), a
 reducer function F, and a concrete array SOURCE, perform a full,
 strict transduction."
   (t--array-transduce xform f source))
+
+(cl-defmethod t-transduce (xform f (source t-reversed))
+  "Transduce over an array/vector/string in reverse order.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete array SOURCE, perform a full,
+strict transduction."
+  (t--reversed-transduce xform f source))
 
 (cl-defmethod t-transduce (xform f (source t-generator))
   "Transduce over generators.
@@ -266,6 +278,37 @@ array."
                           (t-reduced-val acc)
                         (recurse acc (1+ i)))))))
       (recurse identity 0))))
+
+(defun t--reversed-transduce (xform f coll)
+  "Transduce over arrays/vectors/strings in reverse order.
+
+Given a composition of transducer functions (the XFORM), a
+reducer function F, and a concrete array COLL, perform a full,
+strict transduction."
+  (let* ((init   (funcall f))
+         (xf     (funcall xform f))
+         (result (t--reversed-reduce xf init coll)))
+    (funcall xf result)))
+
+(defun t--reversed-reduce (f identity rev)
+  "Reduce over arrays/vectors/strings in reverse order.
+
+F is the transducer/reducer composition, IDENTITY the result of
+applying the reducer without arguments (thus achieving an
+\"element\" or \"zero\" value), and REV is our guaranteed source
+array."
+  (let* ((arr (t-reversed-array rev))
+         (len (length arr)))
+    (cl-labels ((recurse (acc i)
+                  (if (< i 0)
+                      acc
+                    (let ((acc (funcall f acc (aref arr i))))
+                      (if (t-reduced-p acc)
+                          (t-reduced-val acc)
+                        (recurse acc (1- i)))))))
+      (recurse identity (1- len)))))
+
+;; (t-transduce #'t-pass #'t-cons (t-reversed [1 2 3]))
 
 (defun t--generator-transduce (xform f coll)
   "Transduce over generators.
@@ -1378,6 +1421,10 @@ This works for any type of array, like vectors and strings."
   (make-transducers-plist :list plist))
 
 ;; (t-plist '(:a 1 :b 2 :c 3))
+
+(defun t-reversed (array)
+  "Source: Yield an ARRAY's elements in reverse order."
+  (make-transducers-reversed :array array))
 
 (cl-defun t-from-json-buffer (buffer &key (object-type 'plist))
   "Source: Given a BUFFER or its name, read its contents as json.

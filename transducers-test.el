@@ -162,7 +162,8 @@
                      (t-transduce #'t-pass #'t-count (t-buffer-read (current-buffer))))))
   (should (equal 2 (with-temp-buffer
                      (insert "hello\nworld!")
-                     (t-transduce #'t-pass #'t-count (current-buffer))))))
+                     (t-transduce #'t-pass #'t-count (current-buffer)))))
+  (should (equal (list 3 2 1) (t-transduce #'t-pass #'t-cons (t-reversed [1 2 3])))))
 
 (ert-deftest transducers-csv ()
   (should (equal '("Name,Age" "Colin,35" "Tamayo,26")
