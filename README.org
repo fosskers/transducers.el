@@ -1,4 +1,3 @@
-# -*- read-symbol-shorthands: (("t-" . "transducers-")); -*-
 #+title: Transducers: Ergonomic, efficient data processing
 
 #+begin_quote
@@ -35,7 +34,7 @@ evenly-lengthed lines./
 #+end_src
 
 #+RESULTS:
-: 7044
+: 11888
 
 Looking for Transducers in other Lisps? Check out the [[https://codeberg.org/fosskers/cl-transducers][Common Lisp]] and [[https://codeberg.org/fosskers/transducers.fnl][Fennel]]
 implementations!
@@ -144,13 +143,14 @@ write a =loop= again.
 
 * API
 
-As mentioned above, the examples prefix all function calls with =t-= via
-"shorthands".
+The examples here use show each symbol prefixed by ~t-~, but recall that you'll
+need to set an explicit shorthand for this to work. When searching in-editor
+documentation, each symbol is prefixed fully by ~transducers-~.
 
 ** Transducers
 
 Transducers describe how to alter the items of some stream of values. Some
-transducers, like ~take~, can short-circuit.
+transducers, like ~t-take~, can short-circuit.
 
 Multiple transducer functions can be chained together with ~t-comp~.
 
@@ -196,7 +196,7 @@ that are non-nil.
 : (2 5 8)
 
 Only allow values to pass through the transduction once each. Stateful; this
-uses a set internally so could get quite heavy if you're not careful.
+uses a hash table internally so could get quite heavy if you're not careful.
 
 #+begin_src emacs-lisp :results verbatim :exports both
 (t-transduce #'t-unique #'t-cons '(1 2 1 3 2 1 2 "abc"))
@@ -319,7 +319,7 @@ is whether the return value of F changes between two consecutive elements of the
 transduction.
 
 #+begin_src emacs-lisp :results verbatim :exports both
-(t-transduce (t-group-by #'t-evenp) #'t-cons '(2 4 6 7 9 1 2 4 6 3))
+(t-transduce (t-group-by #'cl-evenp) #'t-cons '(2 4 6 7 9 1 2 4 6 3))
 #+end_src
 
 #+RESULTS:
@@ -339,7 +339,7 @@ Insert an ELEM between each value of the transduction.
 Index every value passed through the transduction into a cons pair. Starts at 0.
 
 #+begin_src emacs-lisp :results verbatim :exports both
-(t-transduce #'enumerate #'t-cons '("a" "b" "c"))
+(t-transduce #'t-enumerate #'t-cons '("a" "b" "c"))
 #+end_src
 
 #+RESULTS:
@@ -373,7 +373,7 @@ Inject some ITEM onto the front of the transduction.
 (t-transduce (t-comp (t-filter (lambda (n) (> n 10)))
                      (t-once 'hello)
                      (t-take 3))
-           #'t-cons (t-ints 1))
+             #'t-cons (t-ints 1))
 #+end_src
 
 #+RESULTS:
@@ -386,32 +386,57 @@ accept the running results and the current element as input. The original items
 of the transduction are passed through as-is.
 
 #+begin_src emacs-lisp :results output :exports both
-(t-transduce (t-log (lambda (_ n) (print (format "Got: %s" n)))) #'t-cons '(1 2 3 4 5))
+(t-transduce (t-log (lambda (_ n) (print! "Got: %d" n))) #'t-cons '(1 2 3 4 5))
 #+end_src
 
 #+RESULTS:
-#+begin_example
-
-"Got: 1"
-
-"Got: 2"
-
-"Got: 3"
-
-"Got: 4"
-
-"Got: 5"
-#+end_example
+: Got: 1
+: Got: 2
+: Got: 3
+: Got: 4
+: Got: 5
 
 These are STDOUT results. The actual return value is the result of the reducer,
 in this case ~cons~, thus a list.
+
+*** t-from-csv, t-into-csv
+
+Interpret the data stream as CSV data.
+
+The first item found is assumed to be the header list, and it will be used to
+construct useable hashtables for all subsequent items.
+
+Note: This function makes no attempt to convert types from the original parsed
+strings. If you want numbers, you will need to further parse them yourself.
+
+#+begin_src emacs-lisp :results verbatim :exports both
+(t-transduce (t-comp #'t-from-csv
+                     (t-map (lambda (hm) (gethash "Name" hm))))
+             #'t-cons '("Name,Age" "Alice,35" "Bob,26"))
+#+end_src
+
+#+RESULTS:
+: ("Alice" "Bob")
+
+Given a sequence of HEADERS, rerender each item in the data stream into a CSV
+string. It's assumed that each item in the transduction is a hash table whose
+keys are strings that match the values found in HEADERS.
+
+#+begin_src emacs-lisp :results verbatim :exports both
+(t-transduce (t-comp #'t-from-csv
+                     (t-into-csv '("Name" "Age")))
+             #'t-cons '("Name,Age,Hair" "Alice,35,Blond" "Bob,26,Black"))
+#+end_src
+
+#+RESULTS:
+: ("Name,Age" "Alice,35" "Bob,26")
 
 ** Reducers
 
 Reducers describe how to fold the stream of items down into a single result, be
 it either a new collection or a scalar.
 
-Some reducers, like ~t-first~, can also force the entire transduction to
+Some reducers, like ~first~, can also force the entire transduction to
 short-circuit.
 
 *** t-cons, t-snoc, t-vector, t-string, t-hash-table
@@ -521,7 +546,7 @@ Yield the first value of the transduction. As soon as this first value is
 yielded, the entire transduction stops.
 
 #+begin_src emacs-lisp :exports both
-(t-transduce (t-filter #'t-oddp) #'t-first '(2 4 6 7 10))
+(t-transduce (t-filter #'cl-oddp) #'t-first '(2 4 6 7 10))
 #+end_src
 
 #+RESULTS:
@@ -878,3 +903,7 @@ treatment is needed:
 - [[https://clojure.org/reference/transducers][Clojure: Transducers]]
 - [[https://clojure.org/guides/faq#transducers_vs_seqs][Clojure: What are good uses cases for transducers?]]
 - [[https://www.youtube.com/watch?v=4KqUvG8HPYo][Youtube: Inside Transducers]] (Rich Hickey)
+
+# Local Variables:
+# read-symbol-shorthands: (("t-" . "transducers-"))
+# End:

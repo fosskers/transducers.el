@@ -7,7 +7,7 @@
 - `t-reduced` as a better wrapper than `make-transducers-reduced`.
 - The `t-median` reducer.
 - The `t-reversed` source to iterate from the end of an array/vector/string.
-- `t-const` which was unintentionally missing.
+- `t-const` and `t-snoc` which were unintentionally missing.
 
 #### Changed
 

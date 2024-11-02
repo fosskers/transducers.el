@@ -6,9 +6,9 @@
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
 ;; Modified: November 02, 2024
-;; Version: 1.1.0
+;; Version: 1.2.0
 ;; Keywords: lisp
-;; Homepage: https://git.sr.ht/~fosskers/transducers.el
+;; Homepage: https://codeberg.org/fosskers/transducers.el
 ;; Package-Requires: ((emacs "28.1"))
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
@@ -1060,6 +1060,18 @@ two arguments."
     (`() '())))
 
 ;; (t-transduce (t-map #'1+) #'t-cons '(1 2 3))
+
+(defun t-snoc (&rest vargs)
+  "Reducer: Collect all results as a list, but results are reversed.
+In theory, slightly more performant than `cons' since it performs no final
+reversal.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc) acc)
+    (`() '())))
 
 (defun t-string (&rest vargs)
   "Reducer: Collect all results as a string.
