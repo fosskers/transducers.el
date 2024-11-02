@@ -1079,6 +1079,26 @@ two arguments."
 ;; (t-transduce #'t-pass #'t-average '(1 2 3 4 5 6))
 ;; (t-transduce (t-filter #'cl-evenp) #'t-average '(1 3 5))
 
+(defun t-median (&rest vargs)
+  "Reducer: Calculate the median value of all numberic elements in a
+transduction. The elements are sorted once before the median is
+extracted."
+  (pcase vargs
+    (`(,acc ,input) (cons input acc))
+    (`(,acc) (if (null acc)
+                 (error "t-median: Empty transduction")
+               (let* ((cmp    (cl-etypecase (car acc)
+                                (string #'string<)
+                                (t #'<)))
+                      (len    (length acc))
+                      (ix     (/ len 2))
+                      (sorted (sort acc cmp)))
+                 (nth ix sorted))))
+    (_ '())))
+
+;; (t-transduce #'t-pass #'t-median '(0 1 2 3 4))
+;; (t-transduce #'t-pass #'t-median '("cat" "dog" "cat"))
+
 (defun t-anyp (pred)
   "Reducer: Yield t if any element in the transduction satisfies PRED.
 

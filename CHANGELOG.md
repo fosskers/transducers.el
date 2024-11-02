@@ -5,6 +5,7 @@
 #### Added
 
 - `t-reduced` as a better wrapper than `make-transducers-reduced`.
+- The `t-median` reducer.
 
 #### Changed
 

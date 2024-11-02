@@ -34,6 +34,7 @@
   (should (= 1000 (t-transduce #'t-pass (t-fold #'max) '(1 2 3 4 1000 5 6))))
   (should (= 6    (t-transduce #'t-pass (t-find #'cl-evenp) '(1 3 5 6 9))))
   (should (= 3.5  (t-transduce #'t-pass #'t-average '(1 2 3 4 5 6))))
+  (should (= 4    (t-transduce #'t-pass #'t-median '(1 2 3 4 5 6))))
   (should-error   (t-transduce (t-filter #'cl-evenp) #'t-average '(1 3 5))))
 
 (ert-deftest transducers-map ()
