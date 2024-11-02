@@ -1,11 +1,11 @@
 ;;; transducers.el --- Ergonomic, efficient data processing -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2023 Colin Woodbury
+;; Copyright (C) 2023 - 2024 Colin Woodbury
 ;;
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: February 14, 2024
+;; Modified: November 02, 2024
 ;; Version: 1.1.0
 ;; Keywords: lisp
 ;; Homepage: https://git.sr.ht/~fosskers/transducers.el
@@ -59,6 +59,10 @@
   "A wrapper that signals that reduction has completed."
   val)
 
+(defun t-reduced (val)
+  "Wrap a VAL to signal that reduction has completed."
+  (make-transducers-reduced :val val))
+
 (cl-defstruct (t-generator (:copier nil) (:predicate nil))
   "A wrapper around a function that can potentially yield endless values."
   (func nil :read-only t))
@@ -103,7 +107,7 @@ lambdas or named functions by their symbol."
   "Ensure that X is reduced."
   (if (t-reduced-p x)
       x
-    (make-transducers-reduced :val x)))
+    (t-reduced x)))
 
 (defun t--preserving-reduced (reducer)
   "Given a REDUCER, wraps a reduced value twice.
@@ -116,7 +120,7 @@ value and try to continue the transducing process."
   (lambda (a b)
     (let ((result (funcall reducer a b)))
       (if (t-reduced-p result)
-          (make-transducers-reduced :val result)
+          (t-reduced result)
         result))))
 
 ;; --- Entry Functions --- ;;
@@ -596,7 +600,7 @@ Stops the transduction as soon as any element fails the test.
   (lambda (reducer)
     (lambda (result &rest inputs)
       (if inputs (if (not (apply pred inputs))
-                     (make-transducers-reduced :val result)
+                     (t-reduced result)
                    (apply reducer result inputs))
         (funcall reducer result)))))
 
@@ -1084,7 +1088,7 @@ Short-circuits the transduction as soon as the condition is met.
                         ;; NOTE We manually return `t' here because there is no
                         ;; guarantee that `input' iteslf was not `nil' and still
                         ;; passed the `if' when given to `pred'!
-                        (make-transducers-reduced :val t)
+                        (t-reduced t)
                       nil))
       (`(,acc) acc)
       (_ nil))))
@@ -1102,7 +1106,7 @@ Short-circuits with nil if any element fails the test.
     (pcase vargs
       (`(,acc ,input) (if (and acc (funcall pred input))
                           t
-                        (make-transducers-reduced :val nil)))
+                        (t-reduced nil)))
       (`(,acc) acc)
       (_ t))))
 
@@ -1117,7 +1121,7 @@ two arguments.
 >> (t-transduce (t-filter #\'cl-oddp) #\'t-first \'(2 4 6 7 10))
 => 7"
   (pcase vargs
-    (`(,_ ,input) (make-transducers-reduced :val input))
+    (`(,_ ,input) (t-reduced input))
     (`(,acc) (if (eq 't--none acc)
                  (error "t-first: Empty transduction")
                acc))
@@ -1193,7 +1197,7 @@ Yields nil if no such element were found.
   (lambda (&rest vargs)
     (pcase vargs
       (`(,_ ,input) (if (funcall pred input)
-                        (make-transducers-reduced :val input)
+                        (t-reduced input)
                       nil))
       (`(,acc) acc)
       (_ nil))))
