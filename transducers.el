@@ -637,10 +637,13 @@ so there is no need for the caller to manually pass a REDUCER.
 => (1 2 3 4 5 6 7 8 9)"
   (let ((preserving-reducer (t--preserving-reduced reducer)))
     (lambda (result &optional inputs)
-      (if inputs (t--list-reduce preserving-reducer result inputs)
+      (if inputs (cl-etypecase inputs
+                   (list (t--list-reduce preserving-reducer result inputs))
+                   (array (t--array-reduce preserving-reducer result inputs))
+                   (t (error "The element type %s cannot be concatenated" (type-of inputs))))
         (funcall reducer result)))))
 
-;; (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) (7 8 9)))
+;; (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) [7 8 9] "hi"))
 
 (defun t-flatten (reducer)
   "Transducer: Entirely flatten all lists in the transduction.
@@ -650,16 +653,17 @@ so there is no need for the caller to manually pass a REDUCER.
 
 >> (t-transduce #\'t-flatten #\'t-cons \'((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
 => (1 2 3 0 4 5 6 0 7 8 9 0)"
-  (lambda (result &rest inputs)
-    ;; FIXME 2023-08-01 Only considers the first input element.
-    (if inputs (let ((input (car inputs)))
-                 ;; FIXME 2023-08-01 Why is this only considering lists?
-                 (if (listp input)
-                     (t--list-reduce (t--preserving-reduced (t-flatten reducer)) result input)
-                   (funcall reducer result input)))
+  (lambda (result &optional input)
+    (if input (cl-etypecase input
+                (list  (t--list-reduce (t--preserving-reduced (t-flatten reducer)) result input))
+                (array (t--array-reduce (t--preserving-reduced (t-flatten reducer)) result input))
+                ;; Unlike `concatenate', this transducer is lenient and does a
+                ;; "pass-through" for anything that isn't one of the accepted
+                ;; containers.
+                (t (funcall reducer result input)))
       (funcall reducer result))))
 
-;; (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0))
+;; (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 [5] 6) 0 [7 8 9] 0))
 
 (defun t-segment (n)
   "Transducer: Partition the input into lists of N items.
@@ -1185,10 +1189,10 @@ functions like this, `t-fold' is appropriate.
 ;; (t-transduce #'t-pass (t-fold #'max 0) '(1 2 3 4 1000 5 6))
 ;; (t-transduce #'t-pass (t-fold #'max) '(1 2 3 4 1000 5 6))
 
-(defun t-find (pred)
+(cl-defun t-find (pred &key default)
   "Reducer: Find the first element in the transduction that satisfies a given PRED.
 
-Yields nil if no such element were found.
+Yields nil if no such element were found, unless a DEFAULT is provided.
 
 >> (t-transduce (t-comp (t-map #\'split-string) #\'t-concatenate)
                 (t-find (lambda (word) (>= (length word) 5)))
@@ -1198,13 +1202,15 @@ Yields nil if no such element were found.
     (pcase vargs
       (`(,_ ,input) (if (funcall pred input)
                         (t-reduced input)
-                      nil))
+                      default))
       (`(,acc) acc)
-      (_ nil))))
+      (_ default))))
 
 ;; (t-transduce (t-comp (t-map #'split-string) #'t-concatenate)
 ;;              (t-find (lambda (word) (>= (length word) 5)))
 ;;              '("Walk before me" "and be thou perfect"))
+
+;; (t-transduce #'t-pass (t-find #'cl-evenp :default 'oh) '(1 3 5))
 
 (defun t-for-each (&rest _vargs)
   "Reducer: Run through every item in a transduction for their side effects.

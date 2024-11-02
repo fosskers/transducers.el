@@ -2,9 +2,14 @@
 
 ## Unreleased
 
+#### Added
+
+- `t-reduced` as a better wrapper than `make-transducers-reduced`.
+
 #### Changed
 
 - `t-anyp` and `t-allp` now yield `t` instead of just non-nil when they succeed.
+- `t-concatenate` and `t-flatten` now support vectors/arrays/strings.
 
 ## 1.1.0 (2023-12-24)
 

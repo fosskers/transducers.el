@@ -65,9 +65,9 @@
 
 (ert-deftest transducers-flattening ()
   (should (equal '(1 2 3 4 5 6 7 8 9)
-                 (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) (7 8 9)))))
+                 (t-transduce #'t-concatenate #'t-cons '((1 2 3) (4 5 6) [7 8 9]))))
   (should (equal '(1 2 3 0 4 5 6 0 7 8 9 0)
-                 (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 8 9) 0)))))
+                 (t-transduce #'t-flatten #'t-cons '((1 2 3) 0 (4 (5) 6) 0 (7 [8] 9) 0)))))
 
 (ert-deftest transducers-pairing ()
   (should (equal '((1 2 3) (4 5))
