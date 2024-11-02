@@ -107,6 +107,10 @@ lambdas or named functions by their symbol."
              functions
              :initial-value function))
 
+(defun t-const (item)
+  "Return a function that ignores its argument and returns ITEM instead."
+  (lambda (_x) item))
+
 (defun t--ensure-reduced (x)
   "Ensure that X is reduced."
   (if (t-reduced-p x)
