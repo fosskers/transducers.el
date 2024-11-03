@@ -612,6 +612,22 @@ results and yields t.
 
 #+RESULTS:
 : t
+*** t-into-json-buffer
+
+Write a stream of objects into the current buffer as json.
+
+Makes no assumptions about the position of point or current contents of the
+buffer. That is left to the user to manage, as well as the saving of the buffer
+after writing.
+
+#+begin_src emacs-lisp :exports both
+(with-temp-buffer
+  (t-transduce #'t-pass #'t-into-json-buffer '((:name "Colin") (:name "Jack")))
+  (buffer-string))
+#+end_src
+
+#+RESULTS:
+: [{"name":"Colin"},{"name":"Jack"}]
 
 ** Sources
 
@@ -719,6 +735,46 @@ Recall that strings are also vectors.
 
 #+RESULTS:
 : "olleH"
+*** t-buffer-read, t-file-read
+
+Given a BUFFER or its name, read its contents line by line.
+
+#+begin_src emacs-lisp :exports both
+(t-transduce #'t-pass #'t-count (t-buffer-read (current-buffer)))
+#+end_src
+
+#+RESULTS:
+: 1248
+
+Given a PATH, read its contents line by line.
+
+#+begin_src emacs-lisp :exports both :results verbatim
+(t-transduce (t-comp (t-filter (lambda (line) (string-prefix-p "[" line)))
+                     (t-map #'nreverse))
+             #'t-vector (t-file-read "/home/colin/.config/git/config"))
+#+end_src
+
+#+RESULTS:
+: ["]resu[" "]timmoc[" "]egrem[" "]buhtig[" "]liamednes[" "]hcnarb["]
+
+*** t-from-json-buffer
+
+Given a BUFFER or its name, read its contents as json. It is assumed that the
+buffer contains a json array, and that it's first non-whitespace character is
+thus a =[=.
+
+The OBJECT-TYPE key accepted by this function is passed as-is to
+=json-parse-buffer=, which is used internally to parse json values. The expected
+value of OBJECT-TYPE is one of =hash-table=, =plist=, or =alist=.
+
+#+begin_src emacs-lisp :exports both :results verbatim
+(with-temp-buffer
+  (insert "[{\"name\": \"Colin\"},{\"name\": \"Jack\"}]")
+  (t-transduce #'t-pass #'t-cons (t-from-json-buffer (current-buffer))))
+#+end_src
+
+#+RESULTS:
+: ((:name "Colin") (:name "Jack"))
 
 ** Utilities
 
