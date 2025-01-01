@@ -1026,16 +1026,18 @@ This requires a sequence of HEADERS to match keys by."
                 #\'t-cons (t-ints 1))
 => (hi 11 12)"
   (lambda (reducer)
-    (let ((item item))
+    (let ((item (list item)))
       (lambda (result &rest inputs)
-        (if inputs (if item
-                       (let ((res (funcall reducer result item)))
-                         (if (t-reduced-p res)
-                             res
-                           (progn (setq item nil)
-                                  (apply reducer res inputs))))
-                     (apply reducer result inputs))
-          (funcall reducer result))))))
+        (if item (let ((res (funcall reducer result (car item))))
+                   (if (t-reduced-p res)
+                       res
+                     (setq item nil)
+                     (if inputs
+                         (apply reducer res inputs)
+                       (funcall reducer res))))
+          (if inputs
+              (apply reducer result inputs)
+            (funcall reducer result)))))))
 
 ;; (t-transduce (t-comp (t-filter (lambda (n) (> n 10)))
 ;;                      (t-once 'hi)
