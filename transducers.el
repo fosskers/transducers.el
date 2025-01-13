@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: November 03, 2024
+;; Modified: Januar 13, 2025
 ;; Version: 1.3.0
 ;; Keywords: lisp
 ;; Homepage: https://codeberg.org/fosskers/transducers.el
@@ -1003,9 +1003,9 @@ whose keys are strings that match the values found in HEADERS."
             (funcall reducer result)))))))
 
 ;; (t-transduce (t-comp #'t-from-csv (t-into-csv '("Name" "Age")))
-;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))
+;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Jack,26,Black"))
 ;; (t-transduce (t-comp #'t-from-csv (t-into-csv '()))
-;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))
+;;              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Jack,26,Black"))
 
 (defun t--table-vals->csv (headers table)
   "Convert a hash TABLE to a csv string.
@@ -1026,16 +1026,21 @@ This requires a sequence of HEADERS to match keys by."
                 #\'t-cons (t-ints 1))
 => (hi 11 12)"
   (lambda (reducer)
-    (let ((item item))
+    (let ((unused? t))
       (lambda (result &rest inputs)
-        (if inputs (if item
-                       (let ((res (funcall reducer result item)))
-                         (if (t-reduced-p res)
-                             res
-                           (progn (setq item nil)
-                                  (apply reducer res inputs))))
-                     (apply reducer result inputs))
-          (funcall reducer result))))))
+        (cond ((and inputs unused?)
+               (let ((res (funcall reducer result item)))
+                 (if (t-reduced-p res)
+                     res
+                   (progn (setq unused? nil)
+                          (funcall reducer res (car inputs))))))
+              (inputs (funcall reducer result (car inputs)))
+              ((and (null inputs) unused?)
+               (let ((res (funcall reducer result item)))
+                 (if (t-reduced-p res)
+                     (funcall reducer (t-reduced-val res))
+                   (funcall reducer res))))
+              (t (funcall reducer result)))))))
 
 ;; (t-transduce (t-comp (t-filter (lambda (n) (> n 10)))
 ;;                      (t-once 'hi)
@@ -1374,7 +1379,7 @@ Recall that both vectors and strings are considered Arrays."
            (func (lambda () (aref arr (cl-random len)))))
       (make-transducers-generator :func func))))
 
-;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Tamayo" "Natsume"]))
+;; (t-transduce (t-take 5) #'t-cons (t-shuffle ["Colin" "Jack" "Natsume"]))
 ;; (t-transduce (t-take 5) #'t-cons (t-shuffle []))
 
 (cl-defgeneric t-cycle (seq)
