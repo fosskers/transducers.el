@@ -131,7 +131,9 @@
                  (t-transduce (t-comp (t-filter (lambda (n) (> n 10)))
                                       (t-once 'hi)
                                       (t-take 3))
-                              #'t-cons (t-ints 1)))))
+                              #'t-cons (t-ints 1))))
+  (should (equal '(nil 0) (t-transduce (t-once nil) #'t-cons '(0))))
+  (should (equal '(nil) (t-transduce (t-once nil) #'t-cons '()))))
 
 (ert-deftest transducers-composition ()
   (should (equal '(12 20 30)
@@ -166,9 +168,9 @@
   (should (equal (list 3 2 1) (t-transduce #'t-pass #'t-cons (t-reversed [1 2 3])))))
 
 (ert-deftest transducers-csv ()
-  (should (equal '("Name,Age" "Colin,35" "Tamayo,26")
+  (should (equal '("Name,Age" "Colin,35" "Jack,26")
                  (t-transduce (t-comp #'t-from-csv (t-into-csv '("Name" "Age")))
-                              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Tamayo,26,Black"))))
+                              #'t-cons '("Name,Age,Hair" "Colin,35,Blond" "Jack,26,Black"))))
   (should (equal "1,hi,3" (t--recsv '(1 "hi" 3)))))
 
 (ert-deftest transducers-json ()
