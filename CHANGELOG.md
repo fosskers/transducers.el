@@ -1,5 +1,11 @@
 # Transducers
 
+## 1.3.1 (2025-01-13)
+
+#### Fixed
+
+- `t-once` handles a `nil` argument better.
+
 ## 1.3.0 (2024-11-03)
 
 #### Added
