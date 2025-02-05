@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: Januar 13, 2025
+;; Modified: Februar 05, 2025
 ;; Version: 1.3.1
 ;; Keywords: lisp
 ;; Homepage: https://codeberg.org/fosskers/transducers.el
@@ -405,7 +405,7 @@ source buffer."
     (let ((eof (point-max)))
       (goto-char (point-min))
       (cl-labels ((recurse (acc)
-                    (if (= eof (point))
+                    (if (<= eof (point))
                         acc
                       (let* ((start (line-beginning-position))
                              (end   (line-end-position))
@@ -450,7 +450,7 @@ source buffer."
       ;; ...then yield all entries.
       (cl-labels ((recurse (acc)
                     (t--forward-to-json-token)
-                    (if (or (equal ?\] (char-after)) (= eof (point)))
+                    (if (or (equal ?\] (char-after)) (<= eof (point)))
                         acc
                       (let* ((json (json-parse-buffer :object-type obt))
                              (acc  (funcall f acc json)))
