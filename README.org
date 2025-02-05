@@ -955,7 +955,7 @@ treatment is needed:
 : ((:a . 1) (:b . 2) (:c . 3))
 ** Overwriting a Buffer
 
-It's possible to overwrite the contents of a buffer in-place as its being read.
+It's possible to overwrite the contents of a buffer in-place as it's being read.
 Something like this would suffice:
 
 #+begin_src emacs-lisp
@@ -974,9 +974,9 @@ However, since =with-current-buffer= is also called internally within the
 =t-transduce= implementation for buffers, care must be taken that you don't
 (overly) interfere with the position of =point=!
 
-For example, a call to =(goto-char (point-min))= would endlessly loop, as the
-logic internal to =transduce= is simply trying to jump to the next line one at a
-time.
+For example, a call to =(t-map (lambda (line) (goto-char (point-min))))= would
+result in an endless loop, as the logic internal to =transduce= is simply trying
+to jump to the next line one at a time.
 
 * Writing your own Primitives
 
