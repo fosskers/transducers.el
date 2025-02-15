@@ -34,10 +34,65 @@ evenly-lengthed lines./
 #+end_src
 
 #+RESULTS:
-: 11888
+: 11446
 
 Looking for Transducers in other Lisps? Check out the [[https://codeberg.org/fosskers/cl-transducers][Common Lisp]] and [[https://codeberg.org/fosskers/transducers.fnl][Fennel]]
 implementations!
+
+* Table of Contents :TOC_5_gh:noexport:
+- [[#history-and-motivation][History and Motivation]]
+- [[#installation][Installation]]
+- [[#usage][Usage]]
+  - [[#importing][Importing]]
+  - [[#transducers-reducers-and-sources][Transducers, Reducers, and Sources]]
+- [[#api][API]]
+  - [[#transducers][Transducers]]
+    - [[#t-pass-t-map][t-pass, t-map]]
+    - [[#t-filter-t-filter-map-t-unique-t-unique-by-t-dedup][t-filter, t-filter-map, t-unique, t-unique-by, t-dedup]]
+    - [[#t-drop-t-drop-while-t-take-t-take-while][t-drop, t-drop-while, t-take, t-take-while]]
+    - [[#t-uncons-t-concatenate-t-flatten][t-uncons, t-concatenate, t-flatten]]
+    - [[#t-segment-t-window-t-group-by][t-segment, t-window, t-group-by]]
+    - [[#t-intersperse-t-enumerate-t-step-t-scan][t-intersperse, t-enumerate, t-step, t-scan]]
+    - [[#t-once][t-once]]
+    - [[#t-log][t-log]]
+    - [[#t-from-csv-t-into-csv][t-from-csv, t-into-csv]]
+  - [[#reducers][Reducers]]
+    - [[#t-cons-t-snoc-t-vector-t-string-t-hash-table][t-cons, t-snoc, t-vector, t-string, t-hash-table]]
+    - [[#t-count-t-average-t-median][t-count, t-average, t-median]]
+    - [[#t-any-t-all][t-any?, t-all?]]
+    - [[#t-first-t-last-t-find][t-first, t-last, t-find]]
+    - [[#t-fold][t-fold]]
+    - [[#t-for-each][t-for-each]]
+    - [[#t-into-json-buffer][t-into-json-buffer]]
+  - [[#sources][Sources]]
+    - [[#t-ints-t-random][t-ints, t-random]]
+    - [[#t-cycle-t-repeat-t-shuffle][t-cycle, t-repeat, t-shuffle]]
+    - [[#t-plist][t-plist]]
+    - [[#t-reversed][t-reversed]]
+    - [[#t-buffer-read-t-file-read][t-buffer-read, t-file-read]]
+    - [[#t-from-json-buffer][t-from-json-buffer]]
+  - [[#utilities][Utilities]]
+    - [[#t-comp-t-const][t-comp, t-const]]
+    - [[#t-reduced-t-reduced-t-reduced-val][t-reduced, t-reduced?, t-reduced-val]]
+- [[#example-gallery][Example Gallery]]
+  - [[#words-in-a-file][Words in a File]]
+  - [[#splitting-a-string-by-its-lines][Splitting a string by its lines]]
+  - [[#reading-and-writing-csv-data][Reading and Writing CSV data]]
+  - [[#reading-and-writing-json-data][Reading and Writing JSON data]]
+  - [[#reducing-into-property-lists-and-assocation-lists][Reducing into Property Lists and Assocation Lists]]
+  - [[#overwriting-a-buffer][Overwriting a Buffer]]
+- [[#writing-your-own-primitives][Writing your own Primitives]]
+  - [[#transducers-1][Transducers]]
+    - [[#t-map---a-simple-transformation][t-map - A simple transformation]]
+    - [[#t-filter---ignoring-input][t-filter - Ignoring input]]
+    - [[#t-take-while---short-circuiting][t-take-while - Short-circuiting]]
+    - [[#t-unique---stateful-transduction][t-unique - Stateful transduction]]
+  - [[#reducers-1][Reducers]]
+    - [[#t-count---simple-cumulative-state][t-count - Simple cumulative state]]
+    - [[#t-cons---some-post-processing][t-cons - Some post-processing]]
+    - [[#t-any---short-circuiting][t-any? - Short-circuiting]]
+  - [[#sources-1][Sources]]
+- [[#resources][Resources]]
 
 * History and Motivation
 
@@ -174,7 +229,7 @@ Apply a function F to all elements of the transduction.
 #+RESULTS:
 : (2 3 4)
 
-*** t-filter, t-filter-map, t-unique, t-dedup
+*** t-filter, t-filter-map, t-unique, t-unique-by, t-dedup
 
 Only keep elements from the transduction that satisfy PRED.
 
@@ -204,6 +259,13 @@ uses a hash table internally so could get quite heavy if you're not careful.
 
 #+RESULTS:
 : (1 2 3 "abc")
+
+#+begin_src emacs-lisp :results verbatim :exports both
+(t-transduce (t-unique-by #'cdr) #'t-cons '((:a . 1) (:b . 2) (:c . 1) (:d . 3)))
+#+end_src
+
+#+RESULTS:
+: ((:a . 1) (:b . 2) (:d . 3))
 
 Remove adjacent duplicates from the transduction.
 
@@ -518,13 +580,13 @@ median is extracted.
 #+RESULTS:
 : 1
 
-*** t-anyp, t-allp
+*** t-any?, t-all?
 
 Yield t if any element in the transduction satisfies PRED. Short-circuits the
 transduction as soon as the condition is met.
 
 #+begin_src emacs-lisp :results verbatim :exports both
-(t-transduce #'t-pass (t-anyp #'cl-evenp) '(1 3 5 7 9 2))
+(t-transduce #'t-pass (t-any? #'cl-evenp) '(1 3 5 7 9 2))
 #+end_src
 
 #+RESULTS:
@@ -534,7 +596,7 @@ Yield t if all elements of the transduction satisfy PRED. Short-circuits with
 NIL if any element fails the test.
 
 #+begin_src emacs-lisp :results verbatim :exports both
-(t-transduce #'t-pass (t-allp #'cl-oddp) '(1 3 5 7 9))
+(t-transduce #'t-pass (t-all? #'cl-oddp) '(1 3 5 7 9))
 #+end_src
 
 #+RESULTS:
@@ -812,7 +874,7 @@ Return a function that ignores its argument and returns ITEM instead.
 #+RESULTS:
 : 108
 
-*** t-reduced, t-reduced-p, t-reduced-val
+*** t-reduced, t-reduced?, t-reduced-val
 
 When writing your own transducers and reducers, these functions allow you to
 short-circuit the entire operation.
@@ -830,7 +892,7 @@ Here is a simplified definition of ~t-first~:
 You can see ~t-reduced~ being used to wrap the return value. ~t-transduce~ sees this
 wrapping and immediately halts further processing.
 
-~t-reduced-p~ and ~t-reduced-val~ can similarly be used (mostly within transducer
+~t-reduced?~ and ~t-reduced-val~ can similarly be used (mostly within transducer
 functions) to check if some lower transducer (or the reducer) has signaled a
 short-circuit, and if so potentially perform some clean-up. This is important
 for transducers that carry internal state.
@@ -991,7 +1053,7 @@ optionally continues by calling the next function in the chain, or it ignores
 the current input, or it short-circuits the stream entirely. We'll see examples
 of all of these below.
 
-*** =t-map= - A simple transformation
+*** t-map - A simple transformation
 
 Here is how =map= is implemented in the library. Let's study it to learn the
 overall structure of transducers in general.
@@ -1037,7 +1099,7 @@ as a =&rest=. If the =inputs= list is empty, we know the Transduction is over.
 now, just know that this is the last thing that the top-level =t-transduce= call
 attempts as it is finalising the result.
 
-*** =t-filter= - Ignoring input
+*** t-filter - Ignoring input
 
 With =t-map= fresh in your mind, now stare at this:
 
@@ -1061,7 +1123,7 @@ given_ and directly return, going no further for this particular input element.
 Then, =t-transduce= will supply the next one. The effect is what we'd expect of
 =t-filter=; some elements make it through the stream and some don't.
 
-*** =t-take-while= - Short-circuiting
+*** t-take-while - Short-circuiting
 
 Similar to =t-filter= is =t-take-while=, except that the latter halts the stream
 entirely as soon as an element fails the predicate.
@@ -1083,7 +1145,7 @@ Here =t-reduced= makes its debut. This wraps the given value in a special type
 that signals to =t-transduce= that the transduction has been short-circuited and
 must end. Nothing further will be pulled from the Source.
 
-*** =t-unique= - Stateful transduction
+*** t-unique - Stateful transduction
 
 Despite just being a group of composed functions, individual transducers can
 hold state. Consider =t-unique=, which is called like:
@@ -1128,7 +1190,7 @@ element already.
 A Reducer is a function that _consumes a stream_. It accepts two, one, or no
 arguments.
 
-*** =t-count= - Simple cumulative state
+*** t-count - Simple cumulative state
 
 An example of =t-count= being called:
 
@@ -1169,7 +1231,7 @@ Reducer with the cumulative state thusfar and the current stream element. The
 Reducer then decides what to do with them. In the case of =t-count=, the element
 itself is ignored and we just add 1 to our growing =acc=.
 
-*** =t-cons= - Some post-processing
+*** t-cons - Some post-processing
 
 #+begin_src emacs-lisp
 (defun t-cons (&rest vargs)
@@ -1191,7 +1253,7 @@ reversed once before being yielded to the user.
 In (M) our "zero value" is the empty list. Otherwise, what would we be consing
 onto on the first pass of (I)?
 
-*** =t-anyp= - Short-circuiting
+*** t-any? - Short-circuiting
 
 =t-anyp= stops as soon as anything satisfies its predicate.
 
@@ -1206,7 +1268,7 @@ Usage of =t-reduced= isn't limited to Transducers; Reducers can short-circuit th
 stream as well.
 
 #+begin_src lisp
-(defun t-anyp (pred)
+(defun t-any? (pred)
   (lambda (&rest vargs)
     (pcase vargs
            (`(,_ ,input)

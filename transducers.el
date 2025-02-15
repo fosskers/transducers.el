@@ -5,10 +5,10 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: Februar 05, 2025
+;; Modified: Februar 15, 2025
 ;; Version: 1.3.1
 ;; Keywords: lisp
-;; Homepage: https://codeberg.org/fosskers/transducers.el
+;; Homepage: https://github.com/fosskers/transducers.el
 ;; Package-Requires: ((emacs "28.1"))
 ;; SPDX-License-Identifier: LGPL-3.0-or-later
 ;;
@@ -55,9 +55,12 @@
 (defconst t-done 't--done
   "The signal that a generator source has finished generating values.")
 
-(cl-defstruct (t-reduced (:copier nil))
+(cl-defstruct (t-reduced (:copier nil) (:predicate t-reduced?))
   "A wrapper that signals that reduction has completed."
   val)
+
+(defmacro t-reduced-p (item)
+  `(t-reduced? ,item))
 
 (defun t-reduced (val)
   "Wrap a VAL to signal that reduction has completed."
@@ -875,6 +878,27 @@ so there is no need for the caller to manually pass a REDUCER.
 
 ;; (t-transduce #'t-unique #'t-cons '(1 2 1 3 2 1 2 "abc"))
 
+(defun t-unique-by (f)
+  "Transducer: Only allow values to pass through the transduction once each,
+determined by some key-mapping function. The function is only used to map the
+values to something they should be compared to; the original values themselves
+are what is passed through.
+
+Stateful; this uses a Hash Table internally so could get quite heavy if you're
+not careful."
+  (lambda (reducer)
+    (let ((seen (make-hash-table :test #'equal)))
+      (lambda (result &rest inputs)
+        (if inputs (let ((mapped (funcall f (car inputs))))
+                     (if (gethash mapped seen)
+                         result
+                       (progn (setf (gethash mapped seen) t)
+                              (funcall reducer result (car inputs)))))
+          (funcall reducer result))))))
+
+;; (t-transduce (t-unique-by #'identity) #'t-cons '(1 2 1 3 2 1 2 "abc"))
+;; (t-transduce (t-unique-by #'cdr) #'t-cons '(("a" . 1) ("b" . 2) ("c" . 1) ("d" . 3)))
+
 (defun t-dedup (reducer)
   "Transducer: Remove adjacent duplicates from the transduction.
 
@@ -1163,12 +1187,15 @@ extracted."
 ;; (t-transduce #'t-pass #'t-median '(0 1 2 3 4))
 ;; (t-transduce #'t-pass #'t-median '("cat" "dog" "cat"))
 
-(defun t-anyp (pred)
+(defmacro t-anyp (pred)
+  `(t-any? ,pred))
+
+(defun t-any? (pred)
   "Reducer: Yield t if any element in the transduction satisfies PRED.
 
 Short-circuits the transduction as soon as the condition is met.
 
->> (t-transduce #\'t-pass (t-anyp #\'cl-evenp) \'(1 3 5 7 9 2))
+>> (t-transduce #\'t-pass (t-any? #\'cl-evenp) \'(1 3 5 7 9 2))
 => t"
   (lambda (&rest vargs)
     (pcase vargs
@@ -1183,12 +1210,15 @@ Short-circuits the transduction as soon as the condition is met.
 
 ;; (t-transduce #'t-pass (t-anyp #'cl-evenp) '(1 3 5 7 9 2))
 
-(defun t-allp (pred)
+(defmacro t-allp (pred)
+  `(t-all? ,pred))
+
+(defun t-all? (pred)
   "Reducer: Yield t if all elements of the transduction satisfy PRED.
 
 Short-circuits with nil if any element fails the test.
 
->> (t-transduce #\'t-pass (t-allp #\'cl-oddp) \'(1 3 5 7 9))
+>> (t-transduce #\'t-pass (t-all? #\'cl-oddp) \'(1 3 5 7 9))
 => t"
   (lambda (&rest vargs)
     (pcase vargs
@@ -1198,7 +1228,7 @@ Short-circuits with nil if any element fails the test.
       (`(,acc) acc)
       (_ t))))
 
-;; (t-transduce #'t-pass (t-allp #'cl-oddp) '(1 3 5 7 9))
+;; (t-transduce #'t-pass (t-all? #'cl-oddp) '(1 3 5 7 9))
 
 (defun t-first (&rest vargs)
   "Reducer: Yield the first value of the transduction.
@@ -1297,12 +1327,21 @@ Yields nil if no such element were found, unless a DEFAULT is provided.
 ;; (t-transduce #'t-pass (t-find #'cl-evenp :default 'oh) '(1 3 5))
 
 (defun t-for-each (&rest _vargs)
-  "Reducer: Run through every item in a transduction for their side effects.
-
-Throws away all results and yields t."
+  "Deprecated: use `t-for' instead."
   t)
 
 ;; (t-transduce (t-map (lambda (n) (message "%d" n))) #'t-for-each [1 2 3 4])
+
+(defun t-for (f)
+  "Reducer: Call some effectful function on every item to be
+reduced, and yield a final T."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,_ ,input) (funcall f input))
+      (`(,_) t)
+      (_ nil))))
+
+;; (t-transduce #'t-pass (t-for (lambda (n) (message "%d" n))) [1 2 3 4])
 
 (defun t-into-json-buffer (&rest vargs)
   "Reducer: Write a stream of objects into the current buffer as json.

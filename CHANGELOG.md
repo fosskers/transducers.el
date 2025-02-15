@@ -1,5 +1,15 @@
 # Transducers
 
+## Unreleased
+
+- `t-unique-by` for more control over how uniqueness is determined.
+- `t-for` as a better pattern for doing something effectful over the stream.
+- `t-any?`, `t-all?`, and `t-reduced?` as modern aliases.
+
+#### Deprecated
+
+- `t-for-each`: use `t-for` instead.
+
 ## 1.3.1 (2025-01-13)
 
 #### Fixed
