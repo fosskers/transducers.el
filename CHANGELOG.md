@@ -1,6 +1,6 @@
 # Transducers
 
-## Unreleased
+## 1.4.0 (2025-02-15)
 
 - `t-unique-by` for more control over how uniqueness is determined.
 - `t-for` as a better pattern for doing something effectful over the stream.

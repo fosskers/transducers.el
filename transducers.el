@@ -6,7 +6,7 @@
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
 ;; Modified: Februar 15, 2025
-;; Version: 1.3.1
+;; Version: 1.4.0
 ;; Keywords: lisp
 ;; Homepage: https://github.com/fosskers/transducers.el
 ;; Package-Requires: ((emacs "28.1"))
