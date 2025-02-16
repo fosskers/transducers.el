@@ -102,7 +102,7 @@ streams of data. Transduction operations are strict and don't involve "laziness"
 or "thunking" in any way, yet only process the exact amount of data you ask them
 to.
 
-This library is mostly a port of the [[https://git.sr.ht/~fosskers/cl-transducers][Common Lisp implementation]], with a few
+This library is mostly a port of the [[https://github.com/fosskers/cl-transducers][Common Lisp implementation]], with a few
 alterations to account for the minor differences between Common Lisp and Emacs
 Lisp.
 
