@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: Februar 15, 2025
+;; Modified: November 18, 2025
 ;; Version: 1.4.0
 ;; Keywords: lisp
 ;; Homepage: https://github.com/fosskers/transducers.el
@@ -60,6 +60,7 @@
   val)
 
 (defmacro t-reduced-p (item)
+  "Is a given ITEM already in a reduced state?"
   `(t-reduced? ,item))
 
 (defun t-reduced (val)
@@ -111,7 +112,7 @@ lambdas or named functions by their symbol."
              :initial-value function))
 
 (defun t-const (item)
-  "Return a function that ignores its argument and returns ITEM instead."
+  "Return a function that will ignore its argument and return ITEM instead."
   (lambda (_x) item))
 
 (defun t--ensure-reduced (x)
@@ -879,10 +880,10 @@ so there is no need for the caller to manually pass a REDUCER.
 ;; (t-transduce #'t-unique #'t-cons '(1 2 1 3 2 1 2 "abc"))
 
 (defun t-unique-by (f)
-  "Transducer: Only allow values to pass through the transduction once each,
-determined by some key-mapping function. The function is only used to map the
-values to something they should be compared to; the original values themselves
-are what is passed through.
+  "Transducer: Only allow values to pass through the transduction once each.
+This is determined by a given key-mapping function F. The function is
+only used to map the values to something they should be compared to; the
+original values themselves are what is passed through.
 
 Stateful; this uses a Hash Table internally so could get quite heavy if you're
 not careful."
@@ -1168,9 +1169,11 @@ two arguments."
 ;; (t-transduce (t-filter #'cl-evenp) #'t-average '(1 3 5))
 
 (defun t-median (&rest vargs)
-  "Reducer: Calculate the median value of all numberic elements in a
-transduction. The elements are sorted once before the median is
-extracted."
+  "Reducer: Calculate the median value of all numbers in a transduction.
+The elements are sorted once before the median is extracted.
+
+Regardings VARGS: as a \"reducer\", this function expects zero to
+two arguments."
   (pcase vargs
     (`(,acc ,input) (cons input acc))
     (`(,acc) (if (null acc)
@@ -1188,6 +1191,7 @@ extracted."
 ;; (t-transduce #'t-pass #'t-median '("cat" "dog" "cat"))
 
 (defmacro t-anyp (pred)
+  "Reducer: Yield t if any element in the transduction satisfies PRED."
   `(t-any? ,pred))
 
 (defun t-any? (pred)
@@ -1211,6 +1215,7 @@ Short-circuits the transduction as soon as the condition is met.
 ;; (t-transduce #'t-pass (t-anyp #'cl-evenp) '(1 3 5 7 9 2))
 
 (defmacro t-allp (pred)
+  "Reducer: Yield t if all elements of the transduction satisfy PRED."
   `(t-all? ,pred))
 
 (defun t-all? (pred)
@@ -1333,8 +1338,8 @@ Yields nil if no such element were found, unless a DEFAULT is provided.
 ;; (t-transduce (t-map (lambda (n) (message "%d" n))) #'t-for-each [1 2 3 4])
 
 (defun t-for (f)
-  "Reducer: Call some effectful function on every item to be
-reduced, and yield a final T."
+  "Reducer: Call some effectful function F on every item to be reduced.
+Yields a final T."
   (lambda (&rest vargs)
     (pcase vargs
       (`(,_ ,input) (funcall f input))
