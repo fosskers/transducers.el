@@ -1118,7 +1118,7 @@ two arguments.
 => \"HELLO\""
   (pcase vargs
     (`(,acc ,input) (cons input acc))
-    (`(,acc) (cl-concatenate 'string (reverse acc)))
+    (`(,acc) (cl-concatenate 'string (nreverse acc)))
     (`() '())))
 
 (defun t-vector (&rest vargs)
@@ -1131,8 +1131,10 @@ two arguments.
 => [1 2 3]"
   (pcase vargs
     (`(,acc ,input) (cons input acc))
-    (`(,acc) (cl-concatenate 'vector (reverse acc)))
+    (`(,acc) (vconcat (nreverse acc)))
     (`() '())))
+
+;; (t-transduce #'t-pass #'t-vector '(1 2 3))
 
 (defun t-hash-table (&rest vargs)
   "Reducer: Collect a stream of key-value cons pairs into a hash table.
@@ -1353,17 +1355,33 @@ Yields a final T."
 
 ;; (t-transduce #'t-pass (t-for (lambda (n) (message "%d" n))) [1 2 3 4])
 
+(defun t-quantities (test)
+  "Reducer: Count the occurrences of every item in the transduction.
+Equality is determined via a given TEST predicate function."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`(,acc ,input)
+       (let ((count (gethash input acc)))
+         (cond (count (cl-incf (gethash input acc))
+                      acc)
+               (t (puthash input 1 acc)
+                  acc))))
+      (`(,acc) acc)
+      (_ (make-hash-table :size 32 :test test)))))
+
+;; (t-transduce #'t-pass (t-quantities #'eql) '(1 1 2 1 3 4 5 4 3 2 1))
+
 (defun t-into-json-buffer (&rest vargs)
   "Reducer: Write a stream of objects into the current buffer as json.
 
-Makes no assumptions about the position of point or current
-contents of the buffer. That is left to the user to manage, as
-well as the saving of the buffer after writing.
+  Makes no assumptions about the position of point or current
+  contents of the buffer. That is left to the user to manage, as
+  well as the saving of the buffer after writing.
 
-Yields t upon success.
+  Yields t upon success.
 
-Regardings VARGS: as a \"reducer\", this function expects zero to
-two arguments."
+  Regardings VARGS: as a \"reducer\", this function expects zero to
+  two arguments."
   (pcase vargs
     (`(,_ ,input) (progn
                     (insert (json-serialize input))
@@ -1385,8 +1403,8 @@ two arguments."
 (defun t-repeat (item)
   "Source: Endlessly yield a given ITEM.
 
->> (t-transduce (t-take 4) #\'t-cons (t-repeat 9))
-=> (9 9 9 9)"
+  >> (t-transduce (t-take 4) #\'t-cons (t-repeat 9))
+  => (9 9 9 9)"
   (make-transducers-generator :func (lambda (&rest _) item)))
 
 ;; (t-transduce (t-take 4) #'t-cons (t-repeat 9))
@@ -1394,13 +1412,13 @@ two arguments."
 (cl-defun t-ints (start &key (step 1))
   "Source: Yield all integers.
 
-The generation begins with START and advances by an optional STEP
-value which can be positive or negative. If you only want a
-specific range within the transduction, then use `t-take-while'
-within your transducer chain.
+  The generation begins with START and advances by an optional STEP
+  value which can be positive or negative. If you only want a
+  specific range within the transduction, then use `t-take-while'
+  within your transducer chain.
 
->> (t-transduce (t-take 10) #\'t-cons (t-ints 0 :step 2))
-=> (0 2 4 6 8 10 12 14 16 18)"
+  >> (t-transduce (t-take 10) #\'t-cons (t-ints 0 :step 2))
+  => (0 2 4 6 8 10 12 14 16 18)"
   (let* ((curr start)
          (func (lambda ()
                  (let ((old curr))
@@ -1413,7 +1431,7 @@ within your transducer chain.
 (defun t-random (limit)
   "Source: Yield an endless stream of random numbers.
 
-The numbers generated will be between 0 and LIMIT - 1."
+  The numbers generated will be between 0 and LIMIT - 1."
   (make-transducers-generator :func (lambda () (cl-random limit))))
 
 ;; (t-transduce (t-take 25) #'t-cons (t-random 10))
@@ -1421,7 +1439,7 @@ The numbers generated will be between 0 and LIMIT - 1."
 (defun t-shuffle (arr)
   "Source: Endlessly yield random elements from a given array ARR.
 
-Recall that both vectors and strings are considered Arrays."
+  Recall that both vectors and strings are considered Arrays."
   (if (seq-empty-p arr)
       (make-transducers-generator :func (lambda () t-done))
     (let* ((len (length arr))
@@ -1434,8 +1452,8 @@ Recall that both vectors and strings are considered Arrays."
 (cl-defgeneric t-cycle (seq)
   "Source: Yield the values of a given SEQ endlessly.
 
->> (t-transduce (t-take 10) #'t-cons (t-cycle '(1 2 3)))
-=> (1 2 3 1 2 3 1 2 3 1)")
+  >> (t-transduce (t-take 10) #'t-cons (t-cycle '(1 2 3)))
+  => (1 2 3 1 2 3 1 2 3 1)")
 
 (cl-defmethod t-cycle ((seq list))
   "Source: Yield the values of a given list SEQ endlessly."
@@ -1454,7 +1472,7 @@ Recall that both vectors and strings are considered Arrays."
 (cl-defmethod t-cycle ((seq array))
   "Source: Yield the values of a given array SEQ endlessly.
 
-This works for any type of array, like vectors and strings."
+  This works for any type of array, like vectors and strings."
   (if (zerop (length seq))
       (make-transducers-generator :func (lambda () t-done))
     (let* ((ix 0)
@@ -1498,13 +1516,13 @@ This works for any type of array, like vectors and strings."
 
 (cl-defun t-from-json-buffer (buffer &key (object-type 'plist))
   "Source: Given a BUFFER or its name, read its contents as json.
-It is assumed that the buffer contains a json array, and that
-it's first non-whitespace character is thus a [.
+  It is assumed that the buffer contains a json array, and that
+  it's first non-whitespace character is thus a [.
 
-The OBJECT-TYPE key accepted by this function is passed as-is to
-`json-parse-buffer', which is used internally to parse json
-values. The expected value of OBJECT-TYPE is one of `hash-table',
-`plist', or `alist'."
+                                                 The OBJECT-TYPE key accepted by this function is passed as-is to
+                                                 `json-parse-buffer', which is used internally to parse json
+                                                 values. The expected value of OBJECT-TYPE is one of `hash-table',
+                                                 `plist', or `alist'."
   (make-transducers-json :buffer buffer :object-type object-type))
 
 (provide 'transducers)

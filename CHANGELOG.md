@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### Added
+
+- `t-quantities` for counting occurrences.
+
 #### Changed
 
 - `t-comp` is now a macro.
