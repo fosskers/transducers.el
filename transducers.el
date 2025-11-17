@@ -99,17 +99,22 @@ The buffer is assumed to contain a json array."
         ((symbolp arg) (t-ensure-function (symbol-function arg)))
         (t (error "Argument is not a function: %s" arg))))
 
-(defun t-comp (function &rest functions)
+(defmacro t-comp (function &rest functions)
   "FUNCTION composition.
 
 Any number of FUNCTIONS can be given. You're free to pass either
-lambdas or named functions by their symbol."
-  (cl-reduce (lambda (f g)
-               (let ((f (t-ensure-function f))
-                     (g (t-ensure-function g)))
-                 (lambda (&rest arguments) (funcall f (apply g arguments)))))
-             functions
-             :initial-value function))
+lambdas or named functions by their symbol.
+
+=> (funcall (t-comp #'1+ #'length) \"foo\") == (1+ (length \"foo\"))"
+  (let ((args (gensym "COMP-ARGS-"))
+        (reversed (reverse (cons function functions))))
+    `(lambda (&rest ,args)
+       ,(cl-reduce (lambda (data fn)
+                     `(funcall ,fn ,data))
+                   (cdr reversed)
+                   :initial-value `(apply ,(car reversed) ,args)))))
+
+;; (funcall (t-comp #'1+ #'length) "foo")
 
 (defun t-const (item)
   "Return a function that will ignore its argument and return ITEM instead."

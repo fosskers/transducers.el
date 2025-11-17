@@ -1,5 +1,11 @@
 # Transducers
 
+## Unreleased
+
+#### Changed
+
+- `t-comp` is now a macro.
+
 ## 1.4.0 (2025-02-15)
 
 - `t-unique-by` for more control over how uniqueness is determined.
