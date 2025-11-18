@@ -4,7 +4,8 @@
 
 #### Added
 
-- `t-quantities` for counting occurrences.
+- Reducer: `t-quantities` for counting occurrences.
+- Reducer: `t-partition` for splitting the stream via a predicate.
 
 #### Changed
 

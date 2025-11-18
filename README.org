@@ -34,7 +34,7 @@ evenly-lengthed lines./
 #+end_src
 
 #+RESULTS:
-: 11446
+: 11184
 
 Looking for Transducers in other Lisps? Check out the [[https://github.com/fosskers/cl-transducers][Common Lisp]] and [[https://github.com/fosskers/transducers.fnl][Fennel]]
 implementations!
@@ -63,9 +63,10 @@ implementations!
     - [[#t-hash-table][t-hash-table]]
     - [[#t-count-t-average-t-median-t-quantities][t-count, t-average, t-median, t-quantities]]
     - [[#t-any-t-all][t-any?, t-all?]]
+    - [[#t-partition][t-partition]]
     - [[#t-first-t-last-t-find][t-first, t-last, t-find]]
     - [[#t-fold][t-fold]]
-    - [[#t-for-each][t-for-each]]
+    - [[#t-for][t-for]]
     - [[#t-into-json-buffer][t-into-json-buffer]]
   - [[#sources][Sources]]
     - [[#t-ints-t-random][t-ints, t-random]]
@@ -621,6 +622,18 @@ NIL if any element fails the test.
 #+RESULTS:
 : t
 
+*** t-partition
+
+Given some predicate function, split the stream and collect its values into two
+lists, those items that passed the check, and those that failed. 
+
+#+begin_src emacs-lisp :results verbatim :exports both
+(t-transduce #'t-pass (t-partition #'cl-evenp) '(1 2 3 4 5))
+#+end_src
+
+#+RESULTS:
+: ((2 4) (1 3 5))
+
 *** t-first, t-last, t-find
 
 Yield the first value of the transduction. As soon as this first value is
@@ -682,17 +695,18 @@ With a seed:
 
 In Clojure this function is called =completing=.
 
-*** t-for-each
+*** t-for
 
 Run through every item in a transduction for their side effects. Throws away all
-results and yields t.
+results and yields a final =t=.
 
 #+begin_src emacs-lisp :results verbatim :exports both
-(t-transduce (t-map (lambda (n) (message "%s" n))) #'t-for-each [1 2 3 4])
+(t-transduce (t-map #'1+) (t-for (lambda (n) (message "%s" n))) [1 2 3 4])
 #+end_src
 
 #+RESULTS:
 : t
+
 *** t-into-json-buffer
 
 Write a stream of objects into the current buffer as json.

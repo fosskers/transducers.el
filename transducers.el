@@ -5,7 +5,7 @@
 ;; Author: Colin Woodbury <colin@fosskers.ca>
 ;; Maintainer: Colin Woodbury <colin@fosskers.ca>
 ;; Created: July 26, 2023
-;; Modified: November 18, 2025
+;; Modified: November 19, 2025
 ;; Version: 1.4.0
 ;; Keywords: lisp
 ;; Homepage: https://github.com/fosskers/transducers.el
@@ -1370,6 +1370,22 @@ Equality is determined via a given TEST predicate function."
       (_ (make-hash-table :size 32 :test test)))))
 
 ;; (t-transduce #'t-pass (t-quantities #'eql) '(1 1 2 1 3 4 5 4 3 2 1))
+
+(defun t-partition (pred)
+  "Reducer: Split the stream and collect its values into two lists.
+If the given PRED function passes, the items will appear in the first list,
+otherwise the second."
+  (lambda (&rest vargs)
+    (pcase vargs
+      (`((,passed . ,failed) ,input)
+       (cond ((funcall pred input)
+              (cons (cons input passed) failed))
+             (t (cons passed (cons input failed)))))
+      (`((,passed . ,failed))
+       (cl-values (nreverse passed) (nreverse failed)))
+      (_ (cons '() '())))))
+
+;; (t-transduce #'t-pass (t-partition #'cl-evenp) '(1 2 3 4 5))
 
 (defun t-into-json-buffer (&rest vargs)
   "Reducer: Write a stream of objects into the current buffer as json.
