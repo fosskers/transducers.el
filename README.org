@@ -523,10 +523,10 @@ more performant than ~t-cons~ since it performs no final reversal.
 (t-transduce #'t-pass #'t-snoc '(1 2 3))
 #+end_src
 
-*** t-vector
-
 #+RESULTS:
 : (3 2 1)
+
+*** t-vector
 
 Collect a stream of values into a vector.
 
